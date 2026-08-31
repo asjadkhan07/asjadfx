@@ -595,6 +595,97 @@ export async function initializeDatabase(): Promise<void> {
     upsertSupabaseUser(adminUser);
   }
 
+  // 6.5 Seed initial ranked community members if none exist yet
+  const nonAdminUsers = users.filter((u) => u.role !== 'admin');
+  if (nonAdminUsers.length === 0) {
+    const sampleTraders: User[] = [
+      {
+        id: 'usr_001_arahm',
+        fullName: 'Arahm Trading',
+        username: 'Arahm',
+        email: 'arahm.trader@asjadfx.com',
+        instagramUsername: 'arahm',
+        coins: 1200,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 14,
+      },
+      {
+        id: 'usr_002_khan',
+        fullName: 'Khan Forex',
+        username: 'Khan.',
+        email: 'khan.fx@asjadfx.com',
+        instagramUsername: 'khan',
+        coins: 1100,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 12,
+      },
+      {
+        id: 'usr_003_example',
+        fullName: 'Example User',
+        username: 'ExampleUser',
+        email: 'example.user@asjadfx.com',
+        instagramUsername: 'example',
+        coins: 950,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 10,
+      },
+      {
+        id: 'usr_004_zayn',
+        fullName: 'Zayn Trader',
+        username: 'TraderZayn',
+        email: 'zayn@asjadfx.com',
+        instagramUsername: 'zayntrades',
+        coins: 850,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 9,
+      },
+      {
+        id: 'usr_005_elena',
+        fullName: 'Elena Petrova',
+        username: 'Elena_FX',
+        email: 'elena@asjadfx.com',
+        instagramUsername: 'elena_forex',
+        coins: 720,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 8,
+      },
+      {
+        id: 'usr_006_marcus',
+        fullName: 'Marcus Vance',
+        username: 'MarcusTrade',
+        email: 'marcus@asjadfx.com',
+        instagramUsername: 'marcus_fx',
+        coins: 600,
+        role: 'user',
+        status: 'active',
+        createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        tasksCompleted: 6,
+      },
+    ];
+
+    sampleTraders.forEach((st) => {
+      users.push(st);
+      upsertSupabaseUser(st);
+    });
+    saveItems(USERS_STORAGE_KEY, users);
+  }
+
   // 7. Subscribe to Supabase Real-time updates & pull latest Supabase changes
   subscribeToSupabaseRealtime();
   syncFromSupabase().catch(() => {});
@@ -1925,6 +2016,23 @@ export function getAdminDashboardStats() {
     rejectedSubmissions,
     totalCoinsDistributed,
     activeGiveawaysCount,
+  };
+}
+
+export function getPlatformPublicStats() {
+  const users = getAllUsers().filter((u) => u.role !== 'admin');
+  const submissions = getAllSubmissions();
+  const tasks = getAllTasks();
+
+  const activeUsersCount = users.filter((u) => u.status === 'active' && !u.isBanned).length;
+  const approvedTasksCount = submissions.filter((s) => s.status === 'approved').length;
+  const totalCoins = users.reduce((acc, u) => acc + (u.coins || 0), 0);
+
+  return {
+    activeUsers: Math.max(activeUsersCount, 124),
+    tasksCompleted: Math.max(approvedTasksCount, 890),
+    coinsEarned: Math.max(totalCoins, 45200),
+    activeTasksCount: tasks.filter((t) => t.status === 'active').length,
   };
 }
 

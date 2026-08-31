@@ -3,7 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
 
-// User Pages
+// Public & User Pages
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -38,8 +39,8 @@ const AppContent: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#05070A] text-white">
-        <div className="w-10 h-10 border-2 border-[#F2A900] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs font-bold uppercase tracking-widest text-[#F2A900]/80 font-mono">
+        <div className="w-10 h-10 border-2 border-[#00FF66] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs font-bold uppercase tracking-widest text-[#00FF66]/80 font-mono">
           Securing ASJADFX Session...
         </p>
       </div>
@@ -98,10 +99,41 @@ const AppContent: React.FC = () => {
     if (currentRoute === '/signup') {
       return <SignupPage />;
     }
+    if (currentRoute === '/login') {
+      return <LoginPage />;
+    }
     if (currentRoute === '/forgot-password') {
       return <ForgotPasswordPage />;
     }
-    return <LoginPage />;
+    if (currentRoute === '/leaderboard') {
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <Navbar />
+          <main className="flex-1 w-full">
+            <LeaderboardPage />
+          </main>
+        </div>
+      );
+    }
+    if (currentRoute === '/rules') {
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <Navbar />
+          <main className="flex-1 w-full">
+            <RulesPage />
+          </main>
+        </div>
+      );
+    }
+    // Default public landing page
+    return (
+      <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+        <Navbar />
+        <main className="flex-1 w-full">
+          <LandingPage />
+        </main>
+      </div>
+    );
   }
 
   // ==========================================
@@ -109,7 +141,10 @@ const AppContent: React.FC = () => {
   // ==========================================
   const renderAuthenticatedPage = () => {
     switch (currentRoute) {
+      case '/':
+        return <LandingPage />;
       case '/home':
+      case '/dashboard':
         return <HomePage />;
       case '/tasks':
         return <TasksPage />;
@@ -129,7 +164,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#F2A900]/30 selection:text-[#F2A900]">
+    <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
       {/* Top Navbar */}
       <Navbar />
 
@@ -140,8 +175,8 @@ const AppContent: React.FC = () => {
       <footer className="border-t border-white/5 bg-[#0A0D14]/80 py-6 px-4 sm:px-8 text-center text-xs text-slate-500 mb-16 lg:mb-0">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>ASJADFX Protocol v1.0.2</span>
+            <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
+            <span>ASJADFX Community Protocol</span>
             <span className="opacity-40">•</span>
             <span>All Systems Active</span>
           </div>
@@ -149,7 +184,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-center gap-4 text-[11px] text-slate-400">
             <button
               onClick={() => navigateTo('/rules')}
-              className="hover:text-[#F2A900] transition-colors cursor-pointer"
+              className="hover:text-[#00FF66] transition-colors cursor-pointer"
             >
               Rules & Guidelines
             </button>
@@ -157,7 +192,7 @@ const AppContent: React.FC = () => {
             {user?.role === 'admin' ? (
               <button
                 onClick={() => navigateTo('/admin/dashboard')}
-                className="text-[#F2A900] font-bold hover:underline cursor-pointer font-mono"
+                className="text-[#FFD700] font-bold hover:underline cursor-pointer font-mono"
               >
                 Admin Console →
               </button>
@@ -170,7 +205,7 @@ const AppContent: React.FC = () => {
               </button>
             )}
             <span className="opacity-40">•</span>
-            <span>© 2025 ASJADFX. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} ASJADFX. All rights reserved.</span>
           </div>
         </div>
       </footer>

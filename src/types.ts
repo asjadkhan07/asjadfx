@@ -227,7 +227,9 @@ export interface AdminSystemSettings {
 }
 
 export type AppRoute =
-  // User Routes
+  // Public & User Routes
+  | '/'
+  | '/dashboard'
   | '/login'
   | '/signup'
   | '/forgot-password'

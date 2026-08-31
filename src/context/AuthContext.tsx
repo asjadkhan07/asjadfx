@@ -46,6 +46,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ALL_VALID_ROUTES: AppRoute[] = [
+  '/',
+  '/dashboard',
   '/login',
   '/signup',
   '/forgot-password',
@@ -77,7 +79,7 @@ function getInitialRoute(): AppRoute {
   if (ALL_VALID_ROUTES.includes(path)) {
     return path;
   }
-  return '/login';
+  return '/';
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -111,17 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentPath.startsWith('/admin') && currentPath !== '/admin/login') {
           if (existingUser.role !== 'admin') {
             setAccessDeniedMessage('Access Denied: You do not have permission to access the ASJADFX Admin Panel.');
-            navigateTo('/home');
+            navigateTo('/dashboard');
           } else {
             if (currentPath === '/admin') {
               navigateTo('/admin/dashboard');
             }
           }
-        } else if ((currentPath as string) === '/' || currentPath === '/login' || currentPath === '/signup' || currentPath === '/forgot-password') {
+        } else if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/forgot-password') {
           if (existingUser.role === 'admin') {
             navigateTo('/admin/dashboard');
           } else {
-            navigateTo('/home');
+            navigateTo('/dashboard');
           }
         }
       } else {
@@ -129,8 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         if (currentPath.startsWith('/admin')) {
           navigateTo('/admin/login');
-        } else {
-          navigateTo('/login');
         }
       }
     } else {
@@ -138,8 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentPath.startsWith('/admin') && currentPath !== '/admin/login') {
         setAccessDeniedMessage('Please login with an administrator account to continue.');
         navigateTo('/admin/login');
-      } else if (currentPath !== '/signup' && currentPath !== '/forgot-password' && currentPath !== '/admin/login') {
-        navigateTo('/login');
       }
     }
     setIsLoading(false);
@@ -231,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.user.role === 'admin') {
         navigateTo('/admin/dashboard');
       } else {
-        navigateTo('/home');
+        navigateTo('/dashboard');
       }
     }
     return result;
@@ -257,13 +255,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!result.needsEmailVerification) {
         setUser(result.user);
         setNotifications([]);
-        navigateTo('/home');
+        navigateTo('/dashboard');
       }
     }
     return result;
   };
 
-  const logout = (redirectRoute: AppRoute = '/login') => {
+  const logout = (redirectRoute: AppRoute = '/') => {
     clearSession();
     setUser(null);
     setNotifications([]);
