@@ -5,6 +5,8 @@ import {
   INITIAL_AI_WELCOME,
   QUICK_SUGGESTIONS,
   generateAsjadAiResponse,
+  ContactFlowState,
+  SupportedLanguage,
 } from '../services/asjadAi';
 import {
   Bot,
@@ -26,6 +28,8 @@ export const AsjadAiChatbot: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [sessionLang, setSessionLang] = useState<SupportedLanguage>('en');
+  const [contactState, setContactState] = useState<ContactFlowState>({ step: 'idle' });
 
   const [messages, setMessages] = useState<AiChatMessage[]>([
     {
@@ -64,12 +68,30 @@ export const AsjadAiChatbot: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputQuery('');
     setIsTyping(true);
 
+    // Build recent conversation snippet for contact escalation context
+    const recentSnippet = updatedMessages
+      .slice(-4)
+      .map((m) => `${m.sender.toUpperCase()}: ${m.text}`)
+      .join('\n');
+
     try {
-      const response = await generateAsjadAiResponse(query, user);
+      const response = await generateAsjadAiResponse(
+        query,
+        user,
+        contactState,
+        sessionLang,
+        recentSnippet
+      );
+
+      // Update state machine & session language
+      setContactState(response.newContactState);
+      setSessionLang(response.detectedLang);
+
       const aiMessage: AiChatMessage = {
         id: 'ai-' + Date.now(),
         sender: 'ai',
@@ -83,7 +105,10 @@ export const AsjadAiChatbot: React.FC = () => {
       const fallbackMsg: AiChatMessage = {
         id: 'ai-err-' + Date.now(),
         sender: 'ai',
-        text: "I'm experiencing a brief synchronization delay with the ASJADFX network. You can explore the tasks or leaderboard directly using the navigation menu!",
+        text:
+          sessionLang === 'hinglish'
+            ? 'ASJADFX network ke sath sync karne me thoda samay lag raha hai. Aap navigation menu se seedha tasks ya leaderboard dekh sakte hain!'
+            : "I'm experiencing a brief synchronization delay with the ASJADFX network. You can explore the tasks or leaderboard directly using the navigation menu!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -93,6 +118,8 @@ export const AsjadAiChatbot: React.FC = () => {
   };
 
   const handleClearChat = () => {
+    setContactState({ step: 'idle' });
+    setSessionLang('en');
     setMessages([
       {
         id: 'welcome-fresh',
