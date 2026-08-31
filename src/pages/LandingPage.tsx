@@ -29,7 +29,7 @@ export const LandingPage: React.FC = () => {
   const [syncTick, setSyncTick] = useState(0);
 
   useEffect(() => {
-    const handleSync = () => setSyncTick(t => t + 1);
+    const handleSync = () => setSyncTick((t) => t + 1);
     window.addEventListener('asjadfx_data_updated', handleSync);
     window.addEventListener('storage', handleSync);
     return () => {
@@ -57,27 +57,57 @@ export const LandingPage: React.FC = () => {
   const top3 = topRanked[2];
   const restUsers = topRanked.slice(3);
 
+  // Stagger container variants for hero lines
+  const headingContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.18,
+        delayChildren: 0.15,
+      },
+    },
+  };
+
+  const headingLineVariants = {
+    hidden: { opacity: 0, y: 22 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.65,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  };
+
   return (
-    <div id="asjadfx-landing-page" className="min-h-screen bg-[#05070A] text-slate-100 selection:bg-[#00FF66]/30 selection:text-[#00FF66] overflow-x-hidden">
+    <div
+      id="asjadfx-landing-page"
+      className="min-h-screen bg-[#05070A] text-slate-100 selection:bg-[#00FF66]/30 selection:text-[#00FF66] overflow-x-hidden relative"
+    >
       {/* ========================================================================= */}
       {/* 1. HERO SECTION */}
       {/* ========================================================================= */}
-      <section id="hero" className="relative min-h-[90vh] flex items-center justify-center pt-20 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section
+        id="hero"
+        className="relative min-h-[88vh] flex items-center justify-center pt-16 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      >
         {/* Neon Green & Gold Atmospheric Backdrops */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[350px] bg-gradient-to-tr from-[#00FF66]/15 via-[#FFD700]/10 to-transparent rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute -top-32 right-10 w-96 h-96 bg-[#00FF66]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[850px] h-[360px] bg-gradient-to-tr from-[#00FF66]/15 via-[#FFD700]/10 to-transparent rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute -top-32 right-10 w-96 h-96 bg-[#00FF66]/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
         <div className="absolute bottom-10 left-10 w-80 h-80 bg-[#FFD700]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Subtle Finance Grid / Geometric Canvas Overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(#1A2333_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
+        {/* Subtle Grid / Trading Canvas Pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(#1A2333_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
-          {/* Top Live Badge */}
+          {/* Top Live Badge: Animate in smoothly */}
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0F131C]/90 border border-[#00FF66]/30 shadow-[0_0_20px_rgba(0,255,102,0.15)] backdrop-blur-md"
+            initial={{ opacity: 0, y: -14, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0F131C]/90 border border-[#00FF66]/35 shadow-[0_0_25px_rgba(0,255,102,0.2)] backdrop-blur-md"
           >
             <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
             <span className="text-xs font-mono font-bold tracking-wider text-[#00FF66] uppercase">
@@ -89,52 +119,70 @@ export const LandingPage: React.FC = () => {
             </span>
           </motion.div>
 
-          {/* Main Hero Heading */}
-          <motion.h1
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white font-['Space_Grotesk'] leading-[1.08]"
+          {/* Main Hero Heading: Appears Line by Line with Stagger */}
+          <motion.div
+            variants={headingContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white font-['Space_Grotesk'] leading-[1.12]"
           >
-            Complete Tasks.{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FF66] via-[#10B981] to-[#00FF66] drop-shadow-[0_0_35px_rgba(0,255,102,0.35)]">
-              Earn Coins.
-            </span>
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F2A900] to-[#FFD700]">
-              Rise Higher.
-            </span>
-          </motion.h1>
+            {/* Line 1: Complete Tasks. */}
+            <motion.div variants={headingLineVariants} className="block">
+              Complete Tasks.
+            </motion.div>
+
+            {/* Line 2: Earn Coins. (Glowing Neon Green) */}
+            <motion.div variants={headingLineVariants} className="block mt-1 sm:mt-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00FF66] via-[#10B981] to-[#00FF66] drop-shadow-[0_0_35px_rgba(0,255,102,0.45)]">
+                Earn Coins.
+              </span>
+            </motion.div>
+
+            {/* Line 3: Rise Higher. (Glowing Gold) */}
+            <motion.div variants={headingLineVariants} className="block mt-1 sm:mt-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F2A900] to-[#FFD700] drop-shadow-[0_0_30px_rgba(255,215,0,0.35)]">
+                Rise Higher.
+              </span>
+            </motion.div>
+          </motion.div>
 
           {/* Subtitle */}
           <motion.p
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.65, ease: 'easeOut' }}
             className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed"
           >
             Complete exciting tasks, earn coins, climb the leaderboard and compete with the ASJADFX community.
           </motion.p>
 
-          {/* CTA Action Buttons */}
+          {/* CTA Action Buttons with Micro-Interactions */}
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.8, ease: 'easeOut' }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
           >
-            <button
+            {/* START EARNING: Hover/tap scale, neon pulse, smooth arrow movement */}
+            <motion.button
               id="hero-btn-start-earning"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               onClick={() => navigateTo(isAuthenticated ? '/tasks' : '/signup')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#00FF66] hover:bg-[#05DF72] text-[#05070A] font-extrabold text-sm sm:text-base tracking-wider uppercase shadow-[0_0_30px_rgba(0,255,102,0.45)] hover:shadow-[0_0_40px_rgba(0,255,102,0.6)] transition-all flex items-center justify-center gap-3 cursor-pointer group hover:scale-[1.02]"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#00FF66] hover:bg-[#05DF72] text-[#05070A] font-extrabold text-sm sm:text-base tracking-wider uppercase shadow-[0_0_30px_rgba(0,255,102,0.45)] hover:shadow-[0_0_45px_rgba(0,255,102,0.7)] transition-all flex items-center justify-center gap-3 cursor-pointer group"
             >
               <Zap className="w-5 h-5 fill-current" />
               <span>Start Earning</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-200" />
+            </motion.button>
 
-            <button
+            {/* VIEW LEADERBOARD: Border glow on hover, trophy tilt animation, smooth press */}
+            <motion.button
               id="hero-btn-view-leaderboard"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               onClick={() => {
                 const el = document.getElementById('leaderboard-preview');
                 if (el) {
@@ -143,39 +191,39 @@ export const LandingPage: React.FC = () => {
                   navigateTo('/leaderboard');
                 }
               }}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#0F131C]/90 hover:bg-[#161B24] border border-[#FFD700]/30 hover:border-[#FFD700] text-white font-bold text-sm sm:text-base tracking-wider uppercase backdrop-blur-md transition-all flex items-center justify-center gap-3 cursor-pointer hover:shadow-[0_0_20px_rgba(255,215,0,0.2)]"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#0F131C]/90 hover:bg-[#161B24] border border-[#FFD700]/35 hover:border-[#FFD700] text-white font-bold text-sm sm:text-base tracking-wider uppercase backdrop-blur-md transition-all flex items-center justify-center gap-3 cursor-pointer hover:shadow-[0_0_25px_rgba(255,215,0,0.25)] group"
             >
-              <Trophy className="w-5 h-5 text-[#FFD700]" />
+              <Trophy className="w-5 h-5 text-[#FFD700] group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200" />
               <span>View Leaderboard</span>
-            </button>
+            </motion.button>
           </motion.div>
 
           {/* Floating Feature Teaser Bar */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.95 }}
             className="pt-10 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto"
           >
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#0F131C]/60 border border-white/5 backdrop-blur-sm text-center">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0F131C]/70 border border-white/5 hover:border-[#FFD700]/30 backdrop-blur-sm text-center transition-all">
               <span className="text-xl sm:text-2xl mb-1 block select-none">🪙</span>
-              <div className="text-xs sm:text-sm font-bold text-white">Instant Rewards</div>
-              <div className="text-[10px] text-slate-400">Verified Coins Credited</div>
+              <div className="text-xs sm:text-sm font-bold text-white font-['Space_Grotesk']">Instant Rewards</div>
+              <div className="text-[10px] text-slate-400 font-mono">Verified Coins Credited</div>
             </div>
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#0F131C]/60 border border-white/5 backdrop-blur-sm text-center">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0F131C]/70 border border-white/5 hover:border-[#00FF66]/30 backdrop-blur-sm text-center transition-all">
               <span className="text-xl sm:text-2xl mb-1 block select-none">⚡</span>
-              <div className="text-xs sm:text-sm font-bold text-white">Daily Tasks</div>
-              <div className="text-[10px] text-slate-400">Fresh Content & Missions</div>
+              <div className="text-xs sm:text-sm font-bold text-white font-['Space_Grotesk']">Daily Tasks</div>
+              <div className="text-[10px] text-slate-400 font-mono">Fresh Content & Missions</div>
             </div>
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#0F131C]/60 border border-white/5 backdrop-blur-sm text-center">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0F131C]/70 border border-white/5 hover:border-[#00FF66]/30 backdrop-blur-sm text-center transition-all">
               <span className="text-xl sm:text-2xl mb-1 block select-none">🥇</span>
-              <div className="text-xs sm:text-sm font-bold text-white">Live Rankings</div>
-              <div className="text-[10px] text-slate-400">Automated Leaderboard</div>
+              <div className="text-xs sm:text-sm font-bold text-white font-['Space_Grotesk']">Live Rankings</div>
+              <div className="text-[10px] text-slate-400 font-mono">Automated Leaderboard</div>
             </div>
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#0F131C]/60 border border-white/5 backdrop-blur-sm text-center">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0F131C]/70 border border-white/5 hover:border-[#FFD700]/30 backdrop-blur-sm text-center transition-all">
               <span className="text-xl sm:text-2xl mb-1 block select-none">🎁</span>
-              <div className="text-xs sm:text-sm font-bold text-white">Big Giveaways</div>
-              <div className="text-[10px] text-slate-400">Exclusive Top Rewards</div>
+              <div className="text-xs sm:text-sm font-bold text-white font-['Space_Grotesk']">Big Giveaways</div>
+              <div className="text-[10px] text-slate-400 font-mono">Exclusive Top Rewards</div>
             </div>
           </motion.div>
         </div>
@@ -189,9 +237,11 @@ export const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
             {/* Stat 1: Active Users */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5 }}
+              whileHover={{ y: -4 }}
               className="p-6 sm:p-8 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all text-center relative overflow-hidden group shadow-lg"
             >
               <div className="absolute top-0 right-0 p-4 text-3xl opacity-10 group-hover:opacity-20 transition-opacity select-none text-[#00FF66]">
@@ -211,10 +261,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Stat 2: Tasks Completed */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              whileHover={{ y: -4 }}
               className="p-6 sm:p-8 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all text-center relative overflow-hidden group shadow-lg"
             >
               <div className="absolute top-0 right-0 p-4 text-3xl opacity-10 group-hover:opacity-20 transition-opacity select-none text-[#00FF66]">
@@ -234,10 +285,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Stat 3: Coins Earned */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              whileHover={{ y: -4 }}
               className="p-6 sm:p-8 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#FFD700]/30 transition-all text-center relative overflow-hidden group shadow-lg"
             >
               <div className="absolute top-0 right-0 p-4 text-3xl opacity-10 group-hover:opacity-20 transition-opacity select-none text-[#FFD700]">
@@ -278,9 +330,11 @@ export const LandingPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Card 1: Create Account */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5 }}
+            whileHover={{ y: -6 }}
             className="p-8 rounded-3xl bg-gradient-to-b from-[#0F131C] to-[#0A0D14] border border-white/10 hover:border-[#00FF66]/40 transition-all relative overflow-hidden group shadow-xl"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center text-2xl font-black text-[#00FF66] font-mono mb-6 group-hover:scale-110 group-hover:bg-[#00FF66] group-hover:text-black transition-all shadow-[0_0_20px_rgba(0,255,102,0.2)]">
@@ -296,10 +350,11 @@ export const LandingPage: React.FC = () => {
 
           {/* Card 2: Complete Tasks */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            whileHover={{ y: -6 }}
             className="p-8 rounded-3xl bg-gradient-to-b from-[#0F131C] to-[#0A0D14] border border-white/10 hover:border-[#00FF66]/40 transition-all relative overflow-hidden group shadow-xl"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center text-2xl font-black text-[#00FF66] font-mono mb-6 group-hover:scale-110 group-hover:bg-[#00FF66] group-hover:text-black transition-all shadow-[0_0_20px_rgba(0,255,102,0.2)]">
@@ -315,10 +370,11 @@ export const LandingPage: React.FC = () => {
 
           {/* Card 3: Earn Coins & Rank Up */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            whileHover={{ y: -6 }}
             className="p-8 rounded-3xl bg-gradient-to-b from-[#0F131C] to-[#0A0D14] border border-white/10 hover:border-[#FFD700]/40 transition-all relative overflow-hidden group shadow-xl"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/30 flex items-center justify-center text-2xl font-black text-[#FFD700] font-mono mb-6 group-hover:scale-110 group-hover:bg-[#FFD700] group-hover:text-black transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]">
@@ -355,9 +411,10 @@ export const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Feature 1: Earn Coins */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#FFD700]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform">
@@ -373,10 +430,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Feature 2: Complete Tasks */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.05 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform text-[#00FF66]">
@@ -392,10 +450,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Feature 3: Daily Challenges */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.1 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform text-[#00FF66]">
@@ -411,10 +470,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Feature 4: Leaderboard */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.15 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#FFD700]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform text-[#FFD700]">
@@ -430,10 +490,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Feature 5: Track Progress */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.2 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform text-[#00FF66]">
@@ -449,10 +510,11 @@ export const LandingPage: React.FC = () => {
 
             {/* Feature 6: Level Up */}
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.25 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-white/5 hover:border-[#00FF66]/30 transition-all group shadow-lg"
             >
               <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-2xl mb-5 group-hover:scale-110 transition-transform text-[#00FF66]">
@@ -491,9 +553,10 @@ export const LandingPage: React.FC = () => {
           {/* #2 SILVER RANK */}
           {top2 ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-slate-400/30 text-center relative overflow-hidden shadow-xl order-2 md:order-1"
             >
               <div className="w-12 h-12 mx-auto rounded-full bg-slate-300 text-slate-900 font-black text-lg flex items-center justify-center shadow-md mb-3">
@@ -510,7 +573,7 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="mt-4 p-3 rounded-2xl bg-[#161B24] border border-white/5">
                 <span className="text-2xl font-black text-slate-200 font-mono">🪙 {top2.coins}</span>
-                <span className="block text-[10px] uppercase font-bold text-slate-500">Coins</span>
+                <span className="block text-[10px] uppercase font-bold text-slate-500 font-mono">Coins</span>
               </div>
             </motion.div>
           ) : (
@@ -520,10 +583,11 @@ export const LandingPage: React.FC = () => {
           {/* #1 GOLD CHAMPION RANK */}
           {top1 ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.1 }}
+              whileHover={{ y: -6 }}
               className="p-8 rounded-3xl bg-[#0F131C] border-2 border-[#FFD700] bg-gradient-to-b from-[#FFD700]/15 to-transparent text-center relative overflow-hidden shadow-[0_0_40px_rgba(255,215,0,0.25)] order-1 md:order-2 md:-translate-y-4"
             >
               <div className="absolute top-2 right-2">
@@ -543,7 +607,7 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="mt-4 p-3.5 rounded-2xl bg-[#161B24] border border-[#FFD700]/30 shadow-inner">
                 <span className="text-3xl font-black text-[#FFD700] font-mono">🪙 {top1.coins}</span>
-                <span className="block text-[10px] uppercase font-bold text-[#FFD700]/70">Grand Champion</span>
+                <span className="block text-[10px] uppercase font-bold text-[#FFD700]/80 font-mono">Grand Champion</span>
               </div>
             </motion.div>
           ) : (
@@ -553,10 +617,11 @@ export const LandingPage: React.FC = () => {
           {/* #3 BRONZE RANK */}
           {top3 ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-40px' }}
               transition={{ delay: 0.2 }}
+              whileHover={{ y: -4 }}
               className="p-7 rounded-3xl bg-[#0F131C] border border-amber-700/30 text-center relative overflow-hidden shadow-xl order-3"
             >
               <div className="w-12 h-12 mx-auto rounded-full bg-amber-700 text-white font-black text-lg flex items-center justify-center shadow-md mb-3">
@@ -573,7 +638,7 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="mt-4 p-3 rounded-2xl bg-[#161B24] border border-white/5">
                 <span className="text-2xl font-black text-amber-500 font-mono">🪙 {top3.coins}</span>
-                <span className="block text-[10px] uppercase font-bold text-slate-500">Coins</span>
+                <span className="block text-[10px] uppercase font-bold text-slate-500 font-mono">Coins</span>
               </div>
             </motion.div>
           ) : (
@@ -584,9 +649,14 @@ export const LandingPage: React.FC = () => {
         {/* LOWER RANK CARDS (Rank #4, #5, #6, etc.) */}
         {restUsers.length > 0 && (
           <div className="max-w-4xl mx-auto space-y-3 mb-10">
-            {restUsers.map(u => (
-              <div
+            {restUsers.map((u, idx) => (
+              <motion.div
                 key={u.userId || u.id}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-20px' }}
+                transition={{ delay: idx * 0.06 }}
+                whileHover={{ x: 4 }}
                 className="p-4 sm:p-5 rounded-2xl bg-[#0F131C] border border-white/5 hover:border-white/15 transition-all flex items-center justify-between gap-4 shadow-md"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -610,32 +680,43 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <div className="text-[10px] text-slate-500 uppercase font-mono">Balance</div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
 
         {/* View Full Leaderboard Button */}
         <div className="text-center pt-2">
-          <button
+          <motion.button
             id="btn-view-full-leaderboard-page"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={() => navigateTo('/leaderboard')}
-            className="px-8 py-3.5 rounded-2xl bg-[#161B24] hover:bg-[#1C232E] border border-[#00FF66]/30 hover:border-[#00FF66] text-[#00FF66] font-bold text-sm uppercase tracking-wider transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,255,102,0.15)] cursor-pointer"
+            className="px-8 py-3.5 rounded-2xl bg-[#161B24] hover:bg-[#1C232E] border border-[#00FF66]/35 hover:border-[#00FF66] text-[#00FF66] font-bold text-sm uppercase tracking-wider transition-all inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,255,102,0.15)] cursor-pointer"
           >
             <span>View Full Leaderboard</span>
             <ArrowRight className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
       </section>
 
       {/* ========================================================================= */}
       {/* 6. FINAL CTA SECTION */}
       {/* ========================================================================= */}
-      <section id="cta" className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-b from-[#0A0D14] to-[#05070A]">
+      <section
+        id="cta"
+        className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-b from-[#0A0D14] to-[#05070A]"
+      >
         <div className="absolute inset-0 bg-[radial-gradient(#00FF66_1px,transparent_1px)] [background-size:32px_32px] opacity-10 pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#00FF66]/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 p-8 sm:p-14 rounded-3xl bg-[#0F131C]/90 border border-[#00FF66]/30 shadow-[0_0_50px_rgba(0,255,102,0.15)] backdrop-blur-xl">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 max-w-4xl mx-auto text-center space-y-8 p-8 sm:p-14 rounded-3xl bg-[#0F131C]/90 border border-[#00FF66]/30 shadow-[0_0_50px_rgba(0,255,102,0.15)] backdrop-blur-xl"
+        >
           <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white font-['Space_Grotesk'] tracking-tight">
             Ready to Rise Higher?
           </h2>
@@ -643,16 +724,18 @@ export const LandingPage: React.FC = () => {
             Join ASJADFX, complete tasks, earn coins and climb to the top.
           </p>
           <div>
-            <button
+            <motion.button
               id="cta-btn-get-started"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => navigateTo(isAuthenticated ? '/tasks' : '/signup')}
-              className="px-10 py-4.5 rounded-2xl bg-[#00FF66] hover:bg-[#05DF72] text-[#05070A] font-black text-base sm:text-lg tracking-wider uppercase shadow-[0_0_35px_rgba(0,255,102,0.5)] hover:shadow-[0_0_50px_rgba(0,255,102,0.7)] transition-all inline-flex items-center gap-3 cursor-pointer hover:scale-105"
+              className="px-10 py-4.5 rounded-2xl bg-[#00FF66] hover:bg-[#05DF72] text-[#05070A] font-black text-base sm:text-lg tracking-wider uppercase shadow-[0_0_35px_rgba(0,255,102,0.5)] hover:shadow-[0_0_50px_rgba(0,255,102,0.7)] transition-all inline-flex items-center gap-3 cursor-pointer"
             >
               <span>Get Started</span>
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ========================================================================= */}
@@ -668,27 +751,42 @@ export const LandingPage: React.FC = () => {
               <span className="font-black text-white tracking-wider text-base font-['Space_Grotesk']">
                 ASJADFX
               </span>
-              <p className="text-[10px] text-slate-500 font-mono">Trade. Earn. Rise.</p>
+              <p className="text-[10px] text-[#00FF66] font-mono">TRADE. EARN. RISE.</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
-            <button onClick={() => navigateTo('/')} className="hover:text-[#00FF66] transition-colors cursor-pointer">
+            <button
+              onClick={() => navigateTo('/')}
+              className="hover:text-[#00FF66] transition-colors cursor-pointer"
+            >
               Home
             </button>
-            <button onClick={() => {
-              const el = document.getElementById('how-it-works');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }} className="hover:text-[#00FF66] transition-colors cursor-pointer">
+            <button
+              onClick={() => {
+                const el = document.getElementById('how-it-works');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="hover:text-[#00FF66] transition-colors cursor-pointer"
+            >
               How It Works
             </button>
-            <button onClick={() => navigateTo('/leaderboard')} className="hover:text-[#00FF66] transition-colors cursor-pointer">
+            <button
+              onClick={() => navigateTo('/leaderboard')}
+              className="hover:text-[#00FF66] transition-colors cursor-pointer"
+            >
               Leaderboard
             </button>
-            <button onClick={() => navigateTo('/rules')} className="hover:text-[#00FF66] transition-colors cursor-pointer">
+            <button
+              onClick={() => navigateTo('/rules')}
+              className="hover:text-[#00FF66] transition-colors cursor-pointer"
+            >
               Platform Rules
             </button>
-            <button onClick={() => navigateTo('/admin/login')} className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer font-mono text-[11px]">
+            <button
+              onClick={() => navigateTo('/admin/login')}
+              className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer font-mono text-[11px]"
+            >
               Admin Panel
             </button>
           </div>

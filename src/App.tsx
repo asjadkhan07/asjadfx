@@ -2,6 +2,9 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
+import { AsjadAiChatbot } from './components/AsjadAiChatbot';
+import { AnimatedBackground } from './components/AnimatedBackground';
+import { CoinRewardAnimation } from './components/CoinRewardAnimation';
 
 // Public & User Pages
 import { LandingPage } from './pages/LandingPage';
@@ -97,41 +100,71 @@ const AppContent: React.FC = () => {
   // ==========================================
   if (!isAuthenticated) {
     if (currentRoute === '/signup') {
-      return <SignupPage />;
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <SignupPage />
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
     }
     if (currentRoute === '/login') {
-      return <LoginPage />;
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <LoginPage />
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
     }
     if (currentRoute === '/forgot-password') {
-      return <ForgotPasswordPage />;
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <ForgotPasswordPage />
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
     }
     if (currentRoute === '/leaderboard') {
       return (
-        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
           <Navbar />
-          <main className="flex-1 w-full">
+          <main className="flex-1 w-full relative z-10">
             <LeaderboardPage />
           </main>
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
         </div>
       );
     }
     if (currentRoute === '/rules') {
       return (
-        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
           <Navbar />
-          <main className="flex-1 w-full">
+          <main className="flex-1 w-full relative z-10">
             <RulesPage />
           </main>
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
         </div>
       );
     }
     // Default public landing page
     return (
-      <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+      <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+        <AnimatedBackground />
         <Navbar />
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full relative z-10">
           <LandingPage />
         </main>
+        <AsjadAiChatbot />
+        <CoinRewardAnimation />
       </div>
     );
   }
@@ -164,15 +197,18 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+    <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+      {/* Animated Atmospheric Background */}
+      <AnimatedBackground />
+
       {/* Top Navbar */}
       <Navbar />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full">{renderAuthenticatedPage()}</main>
+      <main className="flex-1 w-full relative z-10">{renderAuthenticatedPage()}</main>
 
       {/* Immersive Footer */}
-      <footer className="border-t border-white/5 bg-[#0A0D14]/80 py-6 px-4 sm:px-8 text-center text-xs text-slate-500 mb-16 lg:mb-0">
+      <footer className="border-t border-white/5 bg-[#0A0D14]/80 py-6 px-4 sm:px-8 text-center text-xs text-slate-500 mb-16 lg:mb-0 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
             <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
@@ -212,6 +248,12 @@ const AppContent: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       <MobileNav />
+
+      {/* Floating ASJAD AI Assistant */}
+      <AsjadAiChatbot />
+
+      {/* Coin Reward Celebratory Effect */}
+      <CoinRewardAnimation />
     </div>
   );
 };

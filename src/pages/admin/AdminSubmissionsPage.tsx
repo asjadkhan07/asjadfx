@@ -6,6 +6,7 @@ import {
   rejectSubmission,
   flagSubmission,
 } from '../../services/storage';
+import { triggerCoinReward } from '../../components/CoinRewardAnimation';
 import { TaskSubmission, SubmissionStatus } from '../../types';
 import {
   Camera,
@@ -50,6 +51,7 @@ export const AdminSubmissionsPage: React.FC = () => {
     if (!user) return;
     const res = approveSubmission(submission.id, user);
     if (res.success) {
+      triggerCoinReward(submission.rewardCoins, `Task Approved: ${submission.taskTitle}`);
       loadData();
       setActionNotice({
         type: 'success',
