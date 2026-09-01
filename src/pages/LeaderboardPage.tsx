@@ -271,12 +271,22 @@ export const LeaderboardPage: React.FC = () => {
 
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-xs text-white">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                              entry.membership_type === 'premium' && entry.premium_status === 'active'
+                                ? 'bg-gradient-to-tr from-[#FFD700] to-amber-500 text-black shadow-[0_0_10px_rgba(255,215,0,0.3)]'
+                                : 'bg-slate-800 text-white'
+                            }`}>
                               {entry.username[0].toUpperCase()}
                             </div>
                             <div>
                               <div className="font-bold text-white text-sm flex items-center gap-2">
                                 <span>{entry.username}</span>
+                                {entry.membership_type === 'premium' && entry.premium_status === 'active' && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-[#FFD700]/20 border border-[#FFD700]/40 text-[#FFD700] text-[9px] font-black font-mono flex items-center gap-0.5">
+                                    <Crown className="w-2.5 h-2.5 fill-[#FFD700]" />
+                                    <span>VIP</span>
+                                  </span>
+                                )}
                                 {isMe && (
                                   <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#00FF66]/20 text-[#00FF66] font-bold">
                                     YOU

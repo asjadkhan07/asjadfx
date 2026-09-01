@@ -20,8 +20,10 @@ import {
   Sparkles,
   ArrowRight,
   Shield,
+  Crown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PremiumUpgradeCard } from './PremiumUpgradeCard';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, currentRoute, navigateTo, logout, unreadNotificationCount } = useAuth();
@@ -47,6 +49,7 @@ export const Navbar: React.FC = () => {
     { label: 'Leaderboard', route: '/leaderboard', icon: <Trophy className="w-4 h-4" /> },
     { label: 'Rewards', route: '/rewards', icon: <Gift className="w-4 h-4" /> },
     { label: 'Giveaway', route: '/giveaway', icon: <Sparkles className="w-4 h-4" /> },
+    { label: '👑 Premium', route: '/premium', icon: <Crown className="w-4 h-4 text-[#FFD700]" /> },
     { label: 'My Coins', route: '/coins', icon: <Coins className="w-4 h-4" /> },
     { label: 'Rules', route: '/rules', icon: <FileText className="w-4 h-4" /> },
   ];
@@ -295,6 +298,11 @@ export const Navbar: React.FC = () => {
                         </button>
                       )}
 
+                      {/* Upgrade Promotion for Free Users */}
+                      <div className="my-2">
+                        <PremiumUpgradeCard onUpgradeClick={() => setIsUserMenuOpen(false)} />
+                      </div>
+
                       <div className="my-1 border-t border-white/5" />
 
                       <button
@@ -413,6 +421,11 @@ export const Navbar: React.FC = () => {
                       </button>
                     );
                   })}
+                  {/* Upgrade Promotion for Free Users in Mobile Menu */}
+                  <div className="pt-2 pb-1">
+                    <PremiumUpgradeCard onUpgradeClick={() => setIsMobileMenuOpen(false)} />
+                  </div>
+
                   <div className="pt-2 border-t border-white/5">
                     <button
                       id="mobile-menu-logout-btn"

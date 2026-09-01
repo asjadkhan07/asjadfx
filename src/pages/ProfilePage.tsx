@@ -22,6 +22,9 @@ import {
   CheckCheck,
   X,
   Camera,
+  Crown,
+  Zap,
+  ArrowRight,
 } from 'lucide-react';
 
 const AVATAR_OPTIONS = [
@@ -29,7 +32,7 @@ const AVATAR_OPTIONS = [
 ];
 
 export const ProfilePage: React.FC = () => {
-  const { user, logout, refreshUser, updateProfile } = useAuth();
+  const { user, logout, refreshUser, updateProfile, navigateTo } = useAuth();
 
   // Edit Profile State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -315,6 +318,88 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* VIP Membership Status Card */}
+        <div className={`rounded-3xl border p-6 sm:p-8 space-y-5 shadow-xl transition-all ${
+          user.membership_type === 'premium' && user.premium_status === 'active'
+            ? 'bg-gradient-to-b from-[#181C26] to-[#0D1017] border-[#FFD700]/40 shadow-[0_0_30px_rgba(255,215,0,0.15)]'
+            : 'bg-[#0F131C] border-white/5'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className={`p-3 rounded-2xl ${
+                user.membership_type === 'premium' && user.premium_status === 'active'
+                  ? 'bg-gradient-to-tr from-[#FFD700] to-amber-500 text-black shadow-[0_0_20px_rgba(255,215,0,0.3)]'
+                  : 'bg-white/5 text-slate-400'
+              }`}>
+                <Crown className="w-6 h-6 fill-current" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-white">Membership Plan</h2>
+                  {user.membership_type === 'premium' && user.premium_status === 'active' ? (
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#FFD700]/20 border border-[#FFD700]/40 text-[#FFD700] text-xs font-black font-mono flex items-center gap-1">
+                      <span>👑</span>
+                      <span>ASJADFX VIP ACTIVE</span>
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-slate-400 text-xs font-mono">
+                      FREE TIER
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {user.membership_type === 'premium' && user.premium_status === 'active'
+                    ? 'Enjoying 25% extra bonus coins on all approved tasks and VIP privileges.'
+                    : 'Upgrade to ASJADFX VIP to earn +25% bonus coins on every approved task.'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              {user.membership_type === 'premium' && user.premium_status === 'active' ? (
+                <button
+                  id="profile-manage-vip-btn"
+                  onClick={() => navigateTo('/premium')}
+                  className="px-5 py-2.5 rounded-xl bg-[#FFD700]/15 hover:bg-[#FFD700]/25 border border-[#FFD700]/40 text-[#FFD700] font-bold text-xs flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <span>VIP Status Details</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  id="profile-upgrade-vip-btn"
+                  onClick={() => navigateTo('/premium')}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FFD700] via-amber-400 to-[#F2A900] text-black font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-[0_0_20px_rgba(255,215,0,0.3)] hover:scale-105 transition-all cursor-pointer"
+                >
+                  <span>UPGRADE TO VIP 👑</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {user.membership_type === 'premium' && user.premium_status === 'active' && user.premium_expires_at && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs font-mono">
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                <span className="text-[10px] text-slate-500 uppercase">Multiplier</span>
+                <div className="text-sm font-black text-[#00FF66] mt-0.5">+25% Coins</div>
+              </div>
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                <span className="text-[10px] text-slate-500 uppercase">Started On</span>
+                <div className="text-sm font-bold text-slate-300 mt-0.5">
+                  {user.premium_started_at ? new Date(user.premium_started_at).toLocaleDateString() : 'Active'}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                <span className="text-[10px] text-slate-500 uppercase">Expires On</span>
+                <div className="text-sm font-bold text-[#FFD700] mt-0.5">
+                  {new Date(user.premium_expires_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Security & Password Change */}

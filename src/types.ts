@@ -37,6 +37,10 @@ export interface User {
   warnings?: UserWarning[];
   warningCount?: number;
   tasksCompleted?: number;
+  membership_type?: 'free' | 'premium';
+  premium_status?: 'inactive' | 'active' | 'expired';
+  premium_started_at?: string;
+  premium_expires_at?: string;
 }
 
 export interface SessionData {
@@ -165,6 +169,7 @@ export type NotificationType =
   | 'account_restricted'
   | 'account_banned'
   | 'announcement'
+  | 'admin_broadcast'
   | 'giveaway_winner'
   | 'coin_credit'
   | 'coin_debit';
@@ -192,6 +197,8 @@ export interface LeaderboardEntry {
   tasksCompleted?: number; // alias
   approvedTasksCount: number;
   joinDate: string;
+  membership_type?: 'free' | 'premium';
+  premium_status?: 'active' | 'inactive' | 'expired';
 }
 
 export type LeaderboardUser = LeaderboardEntry;
@@ -273,6 +280,43 @@ export interface CodeRedemptionLog {
   redeemedAt: string;
 }
 
+export interface PremiumPaymentRequest {
+  id: string;
+  request_id?: string;
+  userId: string;
+  user_id?: string;
+  username: string;
+  email: string;
+  fullName?: string;
+  avatarUrl?: string;
+  plan_name: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  transaction_id: string;
+  payment_screenshot_url?: string;
+  payment_status: 'pending' | 'approved' | 'rejected';
+  request_created_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  rejection_reason?: string;
+  premium_started_at?: string;
+  premium_expires_at?: string;
+}
+
+export interface PremiumSettings {
+  planName: string;
+  price: number;
+  durationDays: number;
+  receiverName: string;
+  upiId: string;
+  qrCodeUrl?: string;
+  instructions: string;
+  enabled: boolean;
+  extraCoinsPercentage: number;
+  benefits?: string[];
+}
+
 export type AppRoute =
   // Public & User Routes
   | '/'
@@ -285,6 +329,7 @@ export type AppRoute =
   | '/tasks'
   | '/leaderboard'
   | '/giveaway'
+  | '/premium'
   | '/profile'
   | '/coins'
   | '/rewards'
@@ -292,6 +337,7 @@ export type AppRoute =
   | '/admin'
   | '/admin/login'
   | '/admin/dashboard'
+  | '/admin/premium'
   | '/admin/tasks'
   | '/admin/platforms'
   | '/admin/submissions'

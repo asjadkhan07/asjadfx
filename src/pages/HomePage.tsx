@@ -258,12 +258,21 @@ export const HomePage: React.FC = () => {
                 </button>
 
                 <button
+                  id="btn-quick-premium"
+                  onClick={() => navigateTo('/premium')}
+                  className="bg-gradient-to-b from-[#1E2330] to-[#121620] hover:border-[#FFD700]/50 border border-[#FFD700]/30 p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer group shadow-[0_0_15px_rgba(255,215,0,0.1)]"
+                >
+                  <span className="text-xl group-hover:scale-110 transition-transform">👑</span>
+                  <span className="text-[11px] font-bold uppercase tracking-tight text-[#FFD700]">VIP Premium</span>
+                </button>
+
+                <button
                   id="btn-quick-rules"
                   onClick={() => navigateTo('/rules')}
-                  className="bg-[#161B24] hover:bg-[#1C232E] border border-white/10 p-4 rounded-xl flex flex-col items-center gap-2 transition-colors cursor-pointer group"
+                  className="bg-[#161B24] hover:bg-[#1C232E] border border-white/10 p-4 rounded-xl flex flex-col items-center gap-2 transition-colors cursor-pointer group col-span-2"
                 >
                   <span className="text-xl group-hover:scale-110 transition-transform">📜</span>
-                  <span className="text-[11px] font-bold uppercase tracking-tight text-slate-200">Read Rules</span>
+                  <span className="text-[11px] font-bold uppercase tracking-tight text-slate-200">Rules & Guidelines</span>
                 </button>
               </div>
             </div>

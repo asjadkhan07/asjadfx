@@ -17,6 +17,8 @@ import {
   UserDailyStreak,
   RedeemCode,
   CodeRedemptionLog,
+  PremiumPaymentRequest,
+  PremiumSettings,
 } from '../types';
 import { generateSalt, hashPassword, verifyPassword, generateToken } from './crypto';
 import {
@@ -59,6 +61,31 @@ const PLATFORMS_STORAGE_KEY = 'asjadfx_platforms_config_v1';
 const RULES_STORAGE_KEY = 'asjadfx_platform_rules_v1';
 const SETTINGS_STORAGE_KEY = 'asjadfx_admin_settings_v1';
 const ANNOUNCEMENTS_STORAGE_KEY = 'asjadfx_announcements_db_v1';
+const PREMIUM_REQUESTS_KEY = 'asjadfx_premium_requests_v1';
+const PREMIUM_SETTINGS_KEY = 'asjadfx_premium_settings_v1';
+
+export const DEFAULT_PREMIUM_SETTINGS: PremiumSettings = {
+  planName: 'ASJADFX PREMIUM',
+  price: 49,
+  durationDays: 120, // 4 months
+  receiverName: 'ASJADFX Official',
+  upiId: 'asjadfx@upi',
+  qrCodeUrl: '',
+  instructions: `1. Scan the official ASJADFX QR code using Google Pay, PhonePe, Paytm, or any UPI app.
+2. Pay the exact amount (₹49).
+3. Copy the 12-digit UPI / UTR Transaction ID.
+4. Upload payment screenshot and submit request for verification.`,
+  enabled: true,
+  extraCoinsPercentage: 25,
+  benefits: [
+    '🪙 +25% Extra Coins on eligible completed tasks',
+    '👑 Exclusive Gold Crown Badge & Profile Glow',
+    '🏆 Leaderboard Premium Highlight & Recognition',
+    '🖼️ Custom Profile Picture upload access',
+    '🎁 Special VIP Giveaway alerts & priority access',
+    '⚡ Early access to new platform features & trading events',
+  ],
+};
 
 // Legacy keys for seamless migration
 const LEGACY_STORAGE_KEYS = {
@@ -638,8 +665,52 @@ export async function initializeDatabase(): Promise<void> {
 
 // ----------------- User Management & Authentication -----------------
 
+export function checkAndUpdateUserPremiumExpiry(user: User): User {
+  if (
+    user.membership_type === 'premium' &&
+    user.premium_status === 'active' &&
+    user.premium_expires_at
+  ) {
+    const expTime = new Date(user.premium_expires_at).getTime();
+    if (!isNaN(expTime) && Date.now() > expTime) {
+      user.membership_type = 'free';
+      user.premium_status = 'expired';
+      updateUser(user);
+      createNotification({
+        userId: user.id,
+        type: 'admin_broadcast',
+        title: '⏳ Premium Membership Expired',
+        message: 'Your ASJADFX Premium access has expired. Upgrade anytime to restore your +25% extra coins bonus and VIP features!',
+        actionUrl: '/premium',
+      });
+    }
+  }
+  return user;
+}
+
 export function getAllUsers(): User[] {
-  return getItems<User>(USERS_STORAGE_KEY);
+  const users = getItems<User>(USERS_STORAGE_KEY);
+  let hasChanges = false;
+  const now = Date.now();
+  const checked = users.map((u) => {
+    if (
+      u.membership_type === 'premium' &&
+      u.premium_status === 'active' &&
+      u.premium_expires_at
+    ) {
+      const expTime = new Date(u.premium_expires_at).getTime();
+      if (!isNaN(expTime) && now > expTime) {
+        u.membership_type = 'free';
+        u.premium_status = 'expired';
+        hasChanges = true;
+      }
+    }
+    return u;
+  });
+  if (hasChanges) {
+    saveItems(USERS_STORAGE_KEY, checked);
+  }
+  return checked;
 }
 
 export function findUserById(id: string): User | null {
@@ -892,6 +963,8 @@ export async function registerUser(input: SignupInput, rememberMe: boolean = tru
     tasksCompleted: 0,
     warnings: [],
     warningCount: 0,
+    membership_type: 'free',
+    premium_status: 'inactive',
   };
 
   // 3. Save to local storage cache
@@ -1364,11 +1437,16 @@ export function approveSubmission(
   }
 
   // Determine exact coin reward amount from task or submission
-  let taskReward = Number(submission.rewardCoins || 0);
-  if (taskReward <= 0) {
+  let baseReward = Number(submission.rewardCoins || 0);
+  if (baseReward <= 0) {
     const task = getTaskById(submission.taskId);
-    taskReward = Number(task?.reward || 100);
+    baseReward = Number(task?.reward || 100);
   }
+
+  // Check if user has active Premium membership (+25% bonus coins)
+  const isPremiumUser = targetUser.membership_type === 'premium' && targetUser.premium_status === 'active';
+  const premiumBonusCoins = isPremiumUser ? Math.round(baseReward * 0.25) : 0;
+  const taskReward = baseReward + premiumBonusCoins;
 
   // 1. Update submission status and mark reward as awarded
   submission.status = 'approved';
@@ -1402,8 +1480,12 @@ export function approveSubmission(
     username: targetUser.username,
     amount: taskReward,
     type: 'credit',
-    reason: `${platformName} Task Approved: "${submission.taskTitle}"`,
-    description: `${platformName} Task Approved: "${submission.taskTitle}"`,
+    reason: isPremiumUser
+      ? `${platformName} Task Approved: "${submission.taskTitle}" (+25% 👑 Premium Bonus)`
+      : `${platformName} Task Approved: "${submission.taskTitle}"`,
+    description: isPremiumUser
+      ? `${platformName} Task Approved: "${submission.taskTitle}" (${baseReward} Coins + ${premiumBonusCoins} 👑 Premium Bonus)`
+      : `${platformName} Task Approved: "${submission.taskTitle}"`,
     source: 'task',
     taskId: submission.taskId,
     taskTitle: submission.taskTitle,
@@ -1422,8 +1504,10 @@ export function approveSubmission(
   createNotification({
     userId: targetUser.id,
     type: 'task_approved',
-    title: '🪙 Coins Credited!',
-    message: `Your ${platformName} task "${submission.taskTitle}" was approved by Admin. +${taskReward} Coins added to your wallet.`,
+    title: isPremiumUser ? '🪙 👑 Premium Coins Credited!' : '🪙 Coins Credited!',
+    message: isPremiumUser
+      ? `Your ${platformName} task "${submission.taskTitle}" was approved by Admin. +${taskReward} Coins added to your wallet (${baseReward} Base + ${premiumBonusCoins} 👑 Premium Bonus!).`
+      : `Your ${platformName} task "${submission.taskTitle}" was approved by Admin. +${taskReward} Coins added to your wallet.`,
     actionUrl: '/coins',
   });
 
@@ -1601,6 +1685,8 @@ export function getLeaderboard(): LeaderboardEntry[] {
     coins: u.coins || 0,
     approvedTasksCount: approvedCounts.get(u.id) || 0,
     joinDate: u.createdAt,
+    membership_type: u.membership_type || 'free',
+    premium_status: u.premium_status || 'inactive',
   }));
 }
 
@@ -2632,4 +2718,326 @@ export function redeemCodeForUser(
     coinsAwarded: rewardCoins,
     code: matchedCode.code,
   };
+}
+
+// ============================================================================
+// 👑 PREMIUM MEMBERSHIP SYSTEM & MANUAL QR PAYMENT WORKFLOW
+// ============================================================================
+
+/**
+ * Returns the current platform-wide Premium plan settings (price, QR, upi, duration)
+ */
+export function getPremiumSettings(): PremiumSettings {
+  const saved = localStorage.getItem(PREMIUM_SETTINGS_KEY);
+  if (!saved) {
+    saveItem(PREMIUM_SETTINGS_KEY, DEFAULT_PREMIUM_SETTINGS);
+    return { ...DEFAULT_PREMIUM_SETTINGS };
+  }
+  try {
+    return { ...DEFAULT_PREMIUM_SETTINGS, ...JSON.parse(saved) };
+  } catch {
+    return { ...DEFAULT_PREMIUM_SETTINGS };
+  }
+}
+
+/**
+ * Updates platform-wide Premium plan settings by Admin
+ */
+export function updatePremiumSettings(newSettings: Partial<PremiumSettings>): PremiumSettings {
+  const current = getPremiumSettings();
+  const updated: PremiumSettings = {
+    ...current,
+    ...newSettings,
+  };
+  localStorage.setItem(PREMIUM_SETTINGS_KEY, JSON.stringify(updated));
+  notifyDataChanged();
+  return updated;
+}
+
+/**
+ * Returns all premium payment requests (all statuses)
+ */
+export function getAllPremiumRequests(): PremiumPaymentRequest[] {
+  return getItems<PremiumPaymentRequest>(PREMIUM_REQUESTS_KEY);
+}
+
+/**
+ * Returns payment requests for a specific user
+ */
+export function getUserPremiumRequests(userId: string): PremiumPaymentRequest[] {
+  const all = getAllPremiumRequests();
+  return all.filter((r) => r.userId === userId || r.user_id === userId);
+}
+
+/**
+ * User submits a manual QR payment request with their transaction/UTR ID and screenshot
+ */
+export function createPremiumPaymentRequest(
+  user: User,
+  data: {
+    transaction_id: string;
+    payment_screenshot_url?: string;
+    amount?: number;
+  }
+): { success: boolean; request?: PremiumPaymentRequest; error?: string } {
+  const cleanTxId = (data.transaction_id || '').trim();
+  if (!cleanTxId) {
+    return { success: false, error: 'Transaction ID / UTR Number is required.' };
+  }
+  if (cleanTxId.length < 6) {
+    return { success: false, error: 'Please enter a valid Transaction / UTR ID (min 6 characters).' };
+  }
+
+  // Check if user already has an active pending payment request
+  const userRequests = getUserPremiumRequests(user.id);
+  const hasPending = userRequests.some((r) => r.payment_status === 'pending');
+  if (hasPending) {
+    return {
+      success: false,
+      error: 'You already have a payment request under verification. Please wait for Admin approval.',
+    };
+  }
+
+  // Check if this transaction ID was already used
+  const allRequests = getAllPremiumRequests();
+  const txDuplicate = allRequests.some(
+    (r) => r.transaction_id.toLowerCase() === cleanTxId.toLowerCase() && r.payment_status !== 'rejected'
+  );
+  if (txDuplicate) {
+    return {
+      success: false,
+      error: 'This Transaction ID has already been submitted or processed. Please verify your payment receipt.',
+    };
+  }
+
+  const settings = getPremiumSettings();
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+  const newRequest: PremiumPaymentRequest = {
+    id: requestId,
+    request_id: requestId,
+    userId: user.id,
+    user_id: user.id,
+    username: user.username,
+    email: user.email,
+    fullName: user.fullName,
+    avatarUrl: user.avatarUrl,
+    plan_name: settings.planName || 'ASJADFX PREMIUM',
+    amount: data.amount ?? settings.price ?? 49,
+    currency: 'INR',
+    payment_method: 'Manual QR / UPI Transfer',
+    transaction_id: cleanTxId,
+    payment_screenshot_url: data.payment_screenshot_url || '',
+    payment_status: 'pending',
+    request_created_at: new Date().toISOString(),
+  };
+
+  allRequests.unshift(newRequest);
+  saveItems(PREMIUM_REQUESTS_KEY, allRequests);
+
+  // Send in-app notification to user confirming submission
+  createNotification({
+    userId: user.id,
+    type: 'admin_broadcast',
+    title: '👑 Payment Request Received',
+    message: `Your payment request of ₹${newRequest.amount} (Ref: ${cleanTxId}) is under review. Our team will verify and activate your Premium shortly.`,
+    actionUrl: '/premium',
+  });
+
+  notifyDataChanged();
+  return { success: true, request: newRequest };
+}
+
+/**
+ * Admin approves a manual payment request and activates the user's Premium membership
+ */
+export function approvePremiumPaymentRequest(
+  requestId: string,
+  adminUser: User,
+  customDays?: number
+): { success: boolean; error?: string } {
+  const allRequests = getAllPremiumRequests();
+  const reqIndex = allRequests.findIndex((r) => r.id === requestId || r.request_id === requestId);
+  if (reqIndex === -1) {
+    return { success: false, error: 'Payment request not found.' };
+  }
+
+  const req = allRequests[reqIndex];
+  if (req.payment_status === 'approved') {
+    return { success: false, error: 'This payment request has already been approved.' };
+  }
+
+  const targetUser = findUserById(req.userId || req.user_id || '');
+  if (!targetUser) {
+    return { success: false, error: 'Target user account not found.' };
+  }
+
+  const settings = getPremiumSettings();
+  const durationDays = customDays || settings.durationDays || 120; // 4 months default
+
+  const now = new Date();
+  // If user is already active premium, extend from their current expiry date
+  let startDate = now;
+  let currentExpiry = targetUser.premium_expires_at ? new Date(targetUser.premium_expires_at) : null;
+  if (targetUser.membership_type === 'premium' && targetUser.premium_status === 'active' && currentExpiry && currentExpiry > now) {
+    startDate = currentExpiry;
+  }
+
+  const expiryDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+  // 1. Update request status
+  req.payment_status = 'approved';
+  req.reviewed_at = new Date().toISOString();
+  req.reviewed_by = adminUser.fullName || adminUser.username;
+  req.premium_started_at = now.toISOString();
+  req.premium_expires_at = expiryDate.toISOString();
+  allRequests[reqIndex] = req;
+  saveItems(PREMIUM_REQUESTS_KEY, allRequests);
+
+  // 2. Activate user Premium status
+  targetUser.membership_type = 'premium';
+  targetUser.premium_status = 'active';
+  targetUser.premium_started_at = targetUser.premium_started_at || now.toISOString();
+  targetUser.premium_expires_at = expiryDate.toISOString();
+  updateUser(targetUser);
+
+  // 3. Dispatch celebration notification to user
+  createNotification({
+    userId: targetUser.id,
+    type: 'admin_broadcast',
+    title: '👑 Welcome to ASJADFX Premium!',
+    message: `Payment verified! Your ${req.plan_name} is now ACTIVE until ${expiryDate.toLocaleDateString()}. Enjoy +25% extra coins on tasks and VIP perks!`,
+    actionUrl: '/premium',
+  });
+
+  notifyDataChanged();
+  return { success: true };
+}
+
+/**
+ * Admin rejects a manual payment request with a required reason
+ */
+export function rejectPremiumPaymentRequest(
+  requestId: string,
+  rejectionReason: string,
+  adminUser: User
+): { success: boolean; error?: string } {
+  const reason = (rejectionReason || '').trim();
+  if (!reason) {
+    return { success: false, error: 'Rejection reason is required.' };
+  }
+
+  const allRequests = getAllPremiumRequests();
+  const reqIndex = allRequests.findIndex((r) => r.id === requestId || r.request_id === requestId);
+  if (reqIndex === -1) {
+    return { success: false, error: 'Payment request not found.' };
+  }
+
+  const req = allRequests[reqIndex];
+  if (req.payment_status === 'approved') {
+    return { success: false, error: 'Cannot reject an already approved request.' };
+  }
+
+  req.payment_status = 'rejected';
+  req.rejection_reason = reason;
+  req.reviewed_at = new Date().toISOString();
+  req.reviewed_by = adminUser.fullName || adminUser.username;
+  allRequests[reqIndex] = req;
+  saveItems(PREMIUM_REQUESTS_KEY, allRequests);
+
+  // Notify user with reason
+  createNotification({
+    userId: req.userId || req.user_id || '',
+    type: 'admin_broadcast',
+    title: '❌ Premium Payment Verification Update',
+    message: `Your payment request for ₹${req.amount} could not be verified. Reason: "${reason}". You may re-submit with correct details.`,
+    actionUrl: '/premium',
+  });
+
+  notifyDataChanged();
+  return { success: true };
+}
+
+/**
+ * Admin manually sets user Premium status (without payment request)
+ */
+export function manuallySetUserPremium(
+  userId: string,
+  isPremium: boolean,
+  durationDays: number,
+  adminUser: User
+): { success: boolean; user?: User; error?: string } {
+  const targetUser = findUserById(userId);
+  if (!targetUser) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  const now = new Date();
+  if (isPremium) {
+    const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    targetUser.membership_type = 'premium';
+    targetUser.premium_status = 'active';
+    targetUser.premium_started_at = now.toISOString();
+    targetUser.premium_expires_at = expiryDate.toISOString();
+
+    createNotification({
+      userId: targetUser.id,
+      type: 'admin_broadcast',
+      title: '👑 ASJADFX Premium Activated!',
+      message: `Admin has activated your Premium membership for ${durationDays} days (Expires: ${expiryDate.toLocaleDateString()}).`,
+      actionUrl: '/premium',
+    });
+  } else {
+    targetUser.membership_type = 'free';
+    targetUser.premium_status = 'inactive';
+    targetUser.premium_expires_at = undefined;
+
+    createNotification({
+      userId: targetUser.id,
+      type: 'admin_broadcast',
+      title: 'ℹ️ Membership Update',
+      message: 'Your Premium membership status has been updated by Admin.',
+      actionUrl: '/premium',
+    });
+  }
+
+  updateUser(targetUser);
+  notifyDataChanged();
+  return { success: true, user: targetUser };
+}
+
+/**
+ * Admin extends existing Premium subscription by X days
+ */
+export function extendUserPremium(
+  userId: string,
+  additionalDays: number,
+  adminUser: User
+): { success: boolean; user?: User; error?: string } {
+  const targetUser = findUserById(userId);
+  if (!targetUser) {
+    return { success: false, error: 'User not found.' };
+  }
+
+  const now = new Date();
+  const currentExpiry = targetUser.premium_expires_at ? new Date(targetUser.premium_expires_at) : now;
+  const baseDate = currentExpiry > now ? currentExpiry : now;
+  const newExpiry = new Date(baseDate.getTime() + additionalDays * 24 * 60 * 60 * 1000);
+
+  targetUser.membership_type = 'premium';
+  targetUser.premium_status = 'active';
+  targetUser.premium_started_at = targetUser.premium_started_at || now.toISOString();
+  targetUser.premium_expires_at = newExpiry.toISOString();
+  updateUser(targetUser);
+
+  createNotification({
+    userId: targetUser.id,
+    type: 'admin_broadcast',
+    title: '👑 Premium Membership Extended!',
+    message: `Admin added +${additionalDays} days to your Premium subscription. New expiry date: ${newExpiry.toLocaleDateString()}.`,
+    actionUrl: '/premium',
+  });
+
+  notifyDataChanged();
+  return { success: true, user: targetUser };
 }

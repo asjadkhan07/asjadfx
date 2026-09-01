@@ -22,7 +22,9 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Crown,
 } from 'lucide-react';
+import { getAllPremiumRequests } from '../../services/storage';
 
 interface NavItem {
   name: string;
@@ -35,8 +37,17 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   const { user, currentRoute, navigateTo, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const allPremiumRequests = getAllPremiumRequests();
+  const pendingPremiumCount = allPremiumRequests.filter((r) => r.payment_status === 'pending').length;
+
   const navItems: NavItem[] = [
     { name: 'Dashboard', route: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    {
+      name: 'Premium Subscriptions',
+      route: '/admin/premium',
+      icon: <Crown className="w-4 h-4 text-[#FFD700]" />,
+      badge: pendingPremiumCount > 0 ? pendingPremiumCount : undefined,
+    },
     { name: 'Tasks', route: '/admin/tasks', icon: <Target className="w-4 h-4" /> },
     { name: 'Platforms', route: '/admin/platforms', icon: <Smartphone className="w-4 h-4" /> },
     { name: 'Submissions', route: '/admin/submissions', icon: <Camera className="w-4 h-4" /> },
@@ -120,6 +131,11 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                     <span className={isActive ? 'text-[#F2A900]' : 'text-slate-400'}>{item.icon}</span>
                     <span>{item.name}</span>
                   </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-black text-[10px] font-mono shadow-sm">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -161,14 +177,21 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                         navigateTo(item.route);
                         setMobileOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isActive
                           ? 'bg-[#F2A900]/15 text-[#F2A900] border border-[#F2A900]/30'
                           : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      <span className={isActive ? 'text-[#F2A900]' : 'text-slate-400'}>{item.icon}</span>
-                      <span>{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className={isActive ? 'text-[#F2A900]' : 'text-slate-400'}>{item.icon}</span>
+                        <span>{item.name}</span>
+                      </div>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-black text-[10px] font-mono">
+                          {item.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

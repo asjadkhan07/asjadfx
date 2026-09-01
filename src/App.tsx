@@ -19,6 +19,7 @@ import { MyCoinsPage } from './pages/MyCoinsPage';
 import { RulesPage } from './pages/RulesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RewardsPage } from './pages/RewardsPage';
+import { PremiumPage } from './pages/PremiumPage';
 
 // Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -36,6 +37,7 @@ import { AdminRulesPage } from './pages/admin/AdminRulesPage';
 import { AdminWarningsPage } from './pages/admin/AdminWarningsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminRewardsPage } from './pages/admin/AdminRewardsPage';
+import { AdminPremiumPage } from './pages/admin/AdminPremiumPage';
 
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, currentRoute, navigateTo } = useAuth();
@@ -67,6 +69,8 @@ const AppContent: React.FC = () => {
         case '/admin':
         case '/admin/dashboard':
           return <AdminDashboardPage />;
+        case '/admin/premium':
+          return <AdminPremiumPage />;
         case '/admin/platforms':
           return <AdminPlatformsPage />;
         case '/admin/tasks':
@@ -91,8 +95,6 @@ const AppContent: React.FC = () => {
           return <AdminWarningsPage />;
         case '/admin/settings':
           return <AdminSettingsPage />;
-        case '/admin/rewards':
-          return <AdminRewardsPage />;
         default:
           return <AdminDashboardPage />;
       }
@@ -196,6 +198,19 @@ const AppContent: React.FC = () => {
         </div>
       );
     }
+    if (currentRoute === '/premium') {
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <Navbar />
+          <main className="flex-1 w-full relative z-10">
+            <PremiumPage />
+          </main>
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
+    }
     // Default public landing page
     return (
       <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
@@ -232,6 +247,8 @@ const AppContent: React.FC = () => {
         return <RewardsPage />;
       case '/rules':
         return <RulesPage />;
+      case '/premium':
+        return <PremiumPage />;
       case '/profile':
         return <ProfilePage />;
       default:

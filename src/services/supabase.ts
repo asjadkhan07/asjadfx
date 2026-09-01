@@ -515,6 +515,10 @@ function mapDbUserToModel(r: any): User {
     warnings: r.warnings ? (typeof r.warnings === 'string' ? JSON.parse(r.warnings) : r.warnings) : [],
     warningCount: r.warning_count ?? r.warningCount ?? (r.warnings?.length || 0),
     tasksCompleted: Number(r.tasks_completed ?? r.tasksCompleted ?? 0),
+    membership_type: (r.membership_type === 'premium' ? 'premium' : 'free'),
+    premium_status: (r.premium_status || 'inactive') as 'inactive' | 'active' | 'expired',
+    premium_started_at: r.premium_started_at || undefined,
+    premium_expires_at: r.premium_expires_at || undefined,
   };
 }
 
@@ -540,6 +544,10 @@ function mapModelToDbUser(u: User): any {
     warnings: u.warnings || [],
     warning_count: u.warnings?.length || 0,
     tasks_completed: u.tasksCompleted || 0,
+    membership_type: u.membership_type || 'free',
+    premium_status: u.premium_status || 'inactive',
+    premium_started_at: u.premium_started_at || null,
+    premium_expires_at: u.premium_expires_at || null,
   };
 }
 
