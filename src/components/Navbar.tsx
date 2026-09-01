@@ -45,7 +45,8 @@ export const Navbar: React.FC = () => {
     { label: 'Dashboard', route: '/dashboard', icon: <Home className="w-4 h-4" /> },
     { label: 'Tasks', route: '/tasks', icon: <Target className="w-4 h-4" /> },
     { label: 'Leaderboard', route: '/leaderboard', icon: <Trophy className="w-4 h-4" /> },
-    { label: 'Giveaway', route: '/giveaway', icon: <Gift className="w-4 h-4" /> },
+    { label: 'Rewards', route: '/rewards', icon: <Gift className="w-4 h-4" /> },
+    { label: 'Giveaway', route: '/giveaway', icon: <Sparkles className="w-4 h-4" /> },
     { label: 'My Coins', route: '/coins', icon: <Coins className="w-4 h-4" /> },
     { label: 'Rules', route: '/rules', icon: <FileText className="w-4 h-4" /> },
   ];

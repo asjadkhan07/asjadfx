@@ -226,6 +226,53 @@ export interface AdminSystemSettings {
   signupEnabled?: boolean;
 }
 
+export interface DailyStreakConfig {
+  enabled: boolean;
+  rewards: [number, number, number, number, number, number, number]; // 7 days (e.g. 10, 15, 20, 25, 30, 40, 100)
+  specialBonusLabel?: string;
+  resetAfterHours?: number; // default 48h to reset
+}
+
+export interface UserDailyStreak {
+  userId: string;
+  currentStreak: number; // 0 to 7
+  lastClaimDate: string; // ISO date
+  lastClaimTimestamp: number;
+  totalDaysClaimed: number;
+  history?: {
+    day: number;
+    coins: number;
+    claimedAt: string;
+  }[];
+}
+
+export interface RedeemCode {
+  id: string;
+  code: string;
+  rewardCoins: number;
+  coins?: number; // Alias for rewardCoins
+  maxUses: number; // 0 = unlimited
+  usedCount: number;
+  currentUses?: number; // Alias for usedCount
+  expiresAt?: string | null; // ISO string
+  status: 'active' | 'disabled';
+  isActive?: boolean;
+  createdAt: string;
+  createdByAdminName?: string;
+  description?: string;
+}
+
+export interface CodeRedemptionLog {
+  id: string;
+  codeId?: string;
+  code: string;
+  userId: string;
+  username: string;
+  fullName?: string;
+  rewardCoins: number;
+  redeemedAt: string;
+}
+
 export type AppRoute =
   // Public & User Routes
   | '/'
@@ -240,6 +287,7 @@ export type AppRoute =
   | '/giveaway'
   | '/profile'
   | '/coins'
+  | '/rewards'
   // Admin Routes
   | '/admin'
   | '/admin/login'
@@ -254,4 +302,5 @@ export type AppRoute =
   | '/admin/announcements'
   | '/admin/rules'
   | '/admin/warnings'
-  | '/admin/settings';
+  | '/admin/settings'
+  | '/admin/rewards';

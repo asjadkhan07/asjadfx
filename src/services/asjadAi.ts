@@ -495,6 +495,43 @@ export async function generateAsjadAiResponse(
     lowerQuery.includes('kaunse task') ||
     lowerQuery.includes('task list')
   ) {
+    if (allTasks.length === 0) {
+      if (lang === 'hinglish') {
+        return {
+          text:
+            'Abhi filhal koi active task available nahi hai. Admin team regular basis par new verified tasks update karti hai. Aap thodi der baad Tasks page check karein ya Daily Streak se rewards claim karein!',
+          actionButton: {
+            label: 'Tasks Page Par Jao →',
+            route: '/tasks',
+          },
+          newContactState: { step: 'idle' },
+          detectedLang: lang,
+        };
+      }
+      if (lang === 'hi_devanagari') {
+        return {
+          text:
+            'वर्तमान में कोई सक्रिय टास्क उपलब्ध नहीं है। एडमिन टीम नियमित रूप से नए वेरिफाइड टास्क जोड़ती है। कृपया कुछ समय बाद टास्क पेज देखें!',
+          actionButton: {
+            label: 'टास्क पेज देखें →',
+            route: '/tasks',
+          },
+          newContactState: { step: 'idle' },
+          detectedLang: lang,
+        };
+      }
+      return {
+        text:
+          'There are currently no active tasks available. The admin team updates new verified tasks regularly. Please check the Tasks tab or claim your Daily Streak rewards!',
+        actionButton: {
+          label: 'Go to Tasks Page →',
+          route: '/tasks',
+        },
+        newContactState: { step: 'idle' },
+        detectedLang: lang,
+      };
+    }
+
     const taskHighlights = allTasks
       .slice(0, 3)
       .map((t) => `• **${t.title}** (${t.platform.toUpperCase()}): +${t.reward} Coins`)

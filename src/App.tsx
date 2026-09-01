@@ -18,6 +18,7 @@ import { GiveawayPage } from './pages/GiveawayPage';
 import { MyCoinsPage } from './pages/MyCoinsPage';
 import { RulesPage } from './pages/RulesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RewardsPage } from './pages/RewardsPage';
 
 // Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -34,6 +35,7 @@ import { AdminAnnouncementsPage } from './pages/admin/AdminAnnouncementsPage';
 import { AdminRulesPage } from './pages/admin/AdminRulesPage';
 import { AdminWarningsPage } from './pages/admin/AdminWarningsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminRewardsPage } from './pages/admin/AdminRewardsPage';
 
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, currentRoute, navigateTo } = useAuth();
@@ -83,10 +85,14 @@ const AppContent: React.FC = () => {
           return <AdminAnnouncementsPage />;
         case '/admin/rules':
           return <AdminRulesPage />;
+        case '/admin/rewards':
+          return <AdminRewardsPage />;
         case '/admin/warnings':
           return <AdminWarningsPage />;
         case '/admin/settings':
           return <AdminSettingsPage />;
+        case '/admin/rewards':
+          return <AdminRewardsPage />;
         default:
           return <AdminDashboardPage />;
       }
@@ -155,6 +161,41 @@ const AppContent: React.FC = () => {
         </div>
       );
     }
+    if (currentRoute === '/rewards') {
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <Navbar />
+          <main className="flex-1 w-full relative z-10">
+            <div className="max-w-4xl mx-auto px-4 py-12 text-center space-y-6">
+              <div className="w-16 h-16 rounded-3xl bg-[#00FF66]/15 border border-[#00FF66]/30 text-[#00FF66] flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(0,255,102,0.3)]">
+                <span className="text-3xl">🎁</span>
+              </div>
+              <h1 className="text-3xl font-black text-white">ASJADFX Rewards & Daily Streaks</h1>
+              <p className="text-slate-400 text-sm max-w-md mx-auto">
+                Sign in to your ASJADFX account to claim daily check-in streaks, redeem exclusive live promo codes, and unlock bonus coin rewards.
+              </p>
+              <div className="flex items-center justify-center gap-4 pt-2">
+                <button
+                  onClick={() => navigateTo('/login')}
+                  className="px-6 py-3 rounded-2xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-extrabold text-sm cursor-pointer shadow-[0_0_20px_rgba(0,255,102,0.4)]"
+                >
+                  Log In to Claim
+                </button>
+                <button
+                  onClick={() => navigateTo('/signup')}
+                  className="px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-sm cursor-pointer border border-white/10"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </main>
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
+    }
     // Default public landing page
     return (
       <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
@@ -187,6 +228,8 @@ const AppContent: React.FC = () => {
         return <GiveawayPage />;
       case '/coins':
         return <MyCoinsPage />;
+      case '/rewards':
+        return <RewardsPage />;
       case '/rules':
         return <RulesPage />;
       case '/profile':

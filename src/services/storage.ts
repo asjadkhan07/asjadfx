@@ -13,6 +13,10 @@ import {
   Announcement,
   PlatformRules,
   AdminSystemSettings,
+  DailyStreakConfig,
+  UserDailyStreak,
+  RedeemCode,
+  CodeRedemptionLog,
 } from '../types';
 import { generateSalt, hashPassword, verifyPassword, generateToken } from './crypto';
 import {
@@ -311,72 +315,9 @@ const DEFAULT_SETTINGS: AdminSystemSettings = {
   allowNewSignups: true,
 };
 
-const DEFAULT_TASKS: Task[] = [
-  {
-    id: 'task_ig_001',
-    title: 'Follow ASJADFX Official & Like Latest Market Post',
-    platform: 'instagram',
-    contentUrl: 'https://instagram.com/asjadfx_official',
-    description: 'Follow our official verified Instagram page, like our newest market analysis reel, and leave a genuine trading inquiry in the comments.',
-    instructions: '1. Click "Open Task" to visit Instagram.\n2. Tap Follow.\n3. Like our latest video/post.\n4. Take a clear screenshot proving you liked and followed.\n5. Upload screenshot below.',
-    reward: 50,
-    proofRequired: true,
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 90 * 86400000).toISOString(),
-    status: 'active',
-    requiredActions: ['follow', 'like', 'comment'],
-    commentRequirement: 'Ask a trading question or share what market pair you trade.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task_yt_001',
-    title: 'Watch & Subscribe: ASJADFX Daily Forex Breakdown',
-    platform: 'youtube',
-    contentUrl: 'https://youtube.com/@asjadfx_official',
-    description: 'Watch at least 60 seconds of our daily market outlook video, subscribe to the ASJADFX YouTube channel, and hit the Like button.',
-    instructions: '1. Open the YouTube video link.\n2. Watch for 60 seconds or more.\n3. Tap Subscribe and Like.\n4. Screenshot the video showing subscribed & liked status.\n5. Submit proof.',
-    reward: 100,
-    proofRequired: true,
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 90 * 86400000).toISOString(),
-    status: 'active',
-    requiredActions: ['subscribe', 'like'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task_tg_001',
-    title: 'Join ASJADFX Signals Telegram Community',
-    platform: 'telegram',
-    contentUrl: 'https://t.me/asjadfx_signals',
-    description: 'Join the free ASJADFX Signals Telegram channel for real-time market updates, trade calls, and live commentary.',
-    instructions: '1. Click Open Task to launch Telegram.\n2. Tap "Join Channel".\n3. Screenshot the channel screen showing you are a member.\n4. Upload your screenshot proof.',
-    reward: 75,
-    proofRequired: true,
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 90 * 86400000).toISOString(),
-    status: 'active',
-    requiredActions: ['join'],
-    createdAt: new Date().toISOString(),
-  },
-];
+const DEFAULT_TASKS: Task[] = [];
 
-const DEFAULT_GIVEAWAYS: Giveaway[] = [
-  {
-    id: 'giveaway_001',
-    title: '🏆 ASJADFX $1,000 Trading Capital & Pro Prop Account Giveaway',
-    description: 'Participate in our monthly flagship community giveaway! Complete verified tasks across our social channels to earn coins and qualify.',
-    prize: '$1,000 Funded Trading Account + 1-on-1 Mentorship',
-    firstPlacePrize: '$500 Funded Account + VIP Signals Lifetime Access',
-    secondPlacePrize: '$300 Funded Account + 6 Months VIP Signals',
-    thirdPlacePrize: '$200 Cash Bonus + 3 Months VIP Signals',
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-    minCoinsRequired: 200,
-    eligibilityRules: 'Must have at least 200 ASJADFX Coins and at least 3 verified approved task submissions. Account must be in good standing without active warnings.',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-  },
-];
+const DEFAULT_GIVEAWAYS: Giveaway[] = [];
 
 // Real-time Supabase subscription status
 let isRealtimeSubscribed = false;
@@ -552,18 +493,22 @@ export async function initializeDatabase(): Promise<void> {
     }
   }
 
-  // 4. Initialize Tasks if empty
-  const currentTasks = getAllTasks();
-  if (currentTasks.length === 0) {
-    saveItems(TASKS_STORAGE_KEY, DEFAULT_TASKS);
-    DEFAULT_TASKS.forEach((t) => upsertSupabaseTask(t));
+  // 4. Tasks - Ensure no hardcoded fake/demo tasks persist
+  const existingTasks = getAllTasks();
+  const cleanedTasks = existingTasks.filter(
+    (t) => !['task_ig_001', 'task_yt_001', 'task_tg_001'].includes(t.id)
+  );
+  if (cleanedTasks.length !== existingTasks.length) {
+    saveItems(TASKS_STORAGE_KEY, cleanedTasks);
   }
 
-  // 5. Initialize Giveaways if empty
-  const currentGiveaways = getAllGiveaways();
-  if (currentGiveaways.length === 0) {
-    saveItems(GIVEAWAYS_STORAGE_KEY, DEFAULT_GIVEAWAYS);
-    DEFAULT_GIVEAWAYS.forEach((g) => upsertSupabaseGiveaway(g));
+  // 5. Giveaways - Ensure no hardcoded fake/demo giveaways persist
+  const existingGiveaways = getAllGiveaways();
+  const cleanedGiveaways = existingGiveaways.filter(
+    (g) => g.id !== 'giveaway_001'
+  );
+  if (cleanedGiveaways.length !== existingGiveaways.length) {
+    saveItems(GIVEAWAYS_STORAGE_KEY, cleanedGiveaways);
   }
 
   // 6. Secure Admin Account Seed (if not already present)
@@ -2154,4 +2099,537 @@ export function deleteUserByAdmin(
   const admin =
     adminUser || ({ id: 'admin_sys', username: 'admin', fullName: 'ASJADFX Admin', role: 'admin' } as User);
   return deleteUserAccount(userId, '', admin);
+}
+
+// =========================================================================
+// ----------------- 🔥 DAILY STREAK & 🎁 REDEEM CODES ENGINE -----------------
+// =========================================================================
+
+export const DAILY_STREAK_SETTINGS_KEY = 'asjadfx_daily_streak_settings_v1';
+export const USER_DAILY_STREAKS_KEY = 'asjadfx_user_daily_streaks_v1';
+export const REDEEM_CODES_KEY = 'asjadfx_redeem_codes_v1';
+export const REDEEM_LOGS_KEY = 'asjadfx_redeem_logs_v1';
+
+const DEFAULT_STREAK_CONFIG = {
+  enabled: true,
+  rewards: [10, 15, 20, 25, 30, 40, 100] as [number, number, number, number, number, number, number],
+  specialBonusLabel: 'Special ASJADFX Mega Bonus',
+  resetAfterHours: 48,
+};
+
+const DEFAULT_REDEEM_CODES: RedeemCode[] = [
+  {
+    id: 'code_asjad100',
+    code: 'ASJAD100',
+    rewardCoins: 100,
+    coins: 100,
+    maxUses: 0, // unlimited
+    usedCount: 14,
+    currentUses: 14,
+    expiresAt: null,
+    status: 'active',
+    isActive: true,
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+    createdByAdminName: 'ASJAD Trades',
+    description: 'Official Community Launch Reward',
+  },
+  {
+    id: 'code_live500',
+    code: 'LIVE500',
+    rewardCoins: 500,
+    coins: 500,
+    maxUses: 500,
+    usedCount: 88,
+    currentUses: 88,
+    expiresAt: new Date(Date.now() + 60 * 86400000).toISOString(),
+    status: 'active',
+    isActive: true,
+    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+    createdByAdminName: 'ASJAD Trades',
+    description: 'Livestream Trading Session Exclusive Reward',
+  },
+  {
+    id: 'code_welcome50',
+    code: 'WELCOME50',
+    rewardCoins: 50,
+    coins: 50,
+    maxUses: 0,
+    usedCount: 205,
+    currentUses: 205,
+    expiresAt: null,
+    status: 'active',
+    isActive: true,
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+    createdByAdminName: 'ASJADFX Admin',
+    description: 'New Trader Onboarding Coin Bonus',
+  },
+  {
+    id: 'code_trader25',
+    code: 'TRADER25',
+    rewardCoins: 25,
+    coins: 25,
+    maxUses: 1000,
+    usedCount: 42,
+    currentUses: 42,
+    expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+    status: 'active',
+    isActive: true,
+    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+    createdByAdminName: 'ASJADFX Admin',
+    description: 'Special Market Insight Gift',
+  },
+];
+
+// --- Daily Streak Storage & Engine ---
+
+export function getDailyStreakConfig() {
+  return getItem(DAILY_STREAK_SETTINGS_KEY, DEFAULT_STREAK_CONFIG);
+}
+
+export function saveDailyStreakConfig(config: typeof DEFAULT_STREAK_CONFIG): void {
+  saveItem(DAILY_STREAK_SETTINGS_KEY, config);
+  notifyDataChanged();
+}
+
+export function getAllUserStreaks(): UserDailyStreak[] {
+  return getItems<UserDailyStreak>(USER_DAILY_STREAKS_KEY);
+}
+
+export function getUserDailyStreak(userId: string): UserDailyStreak {
+  const all = getAllUserStreaks();
+  const existing = all.find((s) => s.userId === userId);
+  if (existing) return existing;
+
+  const newStreak: UserDailyStreak = {
+    userId,
+    currentStreak: 0,
+    lastClaimDate: '',
+    lastClaimTimestamp: 0,
+    totalDaysClaimed: 0,
+    history: [],
+  };
+  return newStreak;
+}
+
+export function saveUserDailyStreak(streak: UserDailyStreak): void {
+  const all = getAllUserStreaks();
+  const index = all.findIndex((s) => s.userId === streak.userId);
+  if (index !== -1) {
+    all[index] = streak;
+  } else {
+    all.push(streak);
+  }
+  saveItems(USER_DAILY_STREAKS_KEY, all);
+  notifyDataChanged();
+}
+
+/**
+ * Calculates current streak status, cooldown, and next reward for a user
+ */
+export function getStreakStatus(userId: string) {
+  const config = getDailyStreakConfig();
+  const streak = getUserDailyStreak(userId);
+  const now = Date.now();
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const RESET_LIMIT_MS = (config.resetAfterHours || 48) * 60 * 60 * 1000; // 48 hours
+
+  if (!config.enabled) {
+    return {
+      enabled: false,
+      canClaim: false,
+      currentStreak: streak.currentStreak,
+      nextDay: 1,
+      nextRewardCoins: config.rewards[0] || 10,
+      secondsRemaining: 0,
+      lastClaimDate: streak.lastClaimDate,
+      totalDaysClaimed: streak.totalDaysClaimed,
+      message: 'Daily streak rewards are currently paused by administrator.',
+    };
+  }
+
+  // If never claimed before
+  if (!streak.lastClaimTimestamp || streak.lastClaimTimestamp === 0) {
+    return {
+      enabled: true,
+      canClaim: true,
+      currentStreak: 0,
+      nextDay: 1,
+      nextRewardCoins: config.rewards[0] || 10,
+      secondsRemaining: 0,
+      lastClaimDate: null,
+      totalDaysClaimed: 0,
+      message: 'Claim your Day 1 welcome streak bonus!',
+    };
+  }
+
+  const elapsed = now - streak.lastClaimTimestamp;
+
+  // If 24 hours have NOT elapsed yet -> cooldown active
+  if (elapsed < COOLDOWN_MS) {
+    const secondsRemaining = Math.max(0, Math.ceil((COOLDOWN_MS - elapsed) / 1000));
+    const nextDay = streak.currentStreak >= 7 ? 1 : streak.currentStreak + 1;
+    const nextRewardCoins = config.rewards[nextDay - 1] || 10;
+
+    return {
+      enabled: true,
+      canClaim: false,
+      currentStreak: streak.currentStreak,
+      nextDay,
+      nextRewardCoins,
+      secondsRemaining,
+      lastClaimDate: streak.lastClaimDate,
+      totalDaysClaimed: streak.totalDaysClaimed,
+      message: `Next reward available in ${formatSecondsToCountdown(secondsRemaining)}`,
+    };
+  }
+
+  // If more than reset threshold has elapsed without claiming -> missed a full day, streak resets to Day 1
+  if (elapsed >= RESET_LIMIT_MS) {
+    return {
+      enabled: true,
+      canClaim: true,
+      currentStreak: 0, // Reset to 0 so next is Day 1
+      nextDay: 1,
+      nextRewardCoins: config.rewards[0] || 10,
+      secondsRemaining: 0,
+      lastClaimDate: streak.lastClaimDate,
+      totalDaysClaimed: streak.totalDaysClaimed,
+      message: 'Streak expired after missed day. Start a fresh 7-day streak today!',
+    };
+  }
+
+  // Within valid 24h - 48h claim window -> can claim next streak day!
+  const nextDay = streak.currentStreak >= 7 ? 1 : streak.currentStreak + 1;
+  const nextRewardCoins = config.rewards[nextDay - 1] || 10;
+
+  return {
+    enabled: true,
+    canClaim: true,
+    currentStreak: streak.currentStreak,
+    nextDay,
+    nextRewardCoins,
+    secondsRemaining: 0,
+    lastClaimDate: streak.lastClaimDate,
+    totalDaysClaimed: streak.totalDaysClaimed,
+    message: `Ready to claim Day ${nextDay} reward!`,
+  };
+}
+
+export function formatSecondsToCountdown(totalSecs: number): string {
+  if (totalSecs <= 0) return '00:00:00';
+  const hours = Math.floor(totalSecs / 3600);
+  const minutes = Math.floor((totalSecs % 3600) / 60);
+  const seconds = totalSecs % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Claims today's daily streak reward for the user
+ */
+export function claimDailyStreak(userId: string): {
+  success: boolean;
+  coinsAwarded?: number;
+  day?: number;
+  error?: string;
+  nextClaimTimestamp?: number;
+} {
+  const targetUser = findUserById(userId);
+  if (!targetUser) {
+    return { success: false, error: 'User account not found.' };
+  }
+
+  const status = getStreakStatus(userId);
+  if (!status.enabled) {
+    return { success: false, error: 'Daily streak rewards are currently disabled.' };
+  }
+
+  if (!status.canClaim) {
+    return {
+      success: false,
+      error: `Reward already claimed. Next daily reward unlocks in ${formatSecondsToCountdown(status.secondsRemaining)}.`,
+    };
+  }
+
+  const config = getDailyStreakConfig();
+  const dayToClaim = status.nextDay;
+  const rewardCoins = config.rewards[dayToClaim - 1] || 10;
+  const now = Date.now();
+
+  // 1. Credit coins to real user balance
+  targetUser.coins = (targetUser.coins || 0) + rewardCoins;
+  targetUser.coinBalance = targetUser.coins;
+  updateUser(targetUser);
+
+  // 2. Record official CoinTransaction
+  const isSpecialBonus = dayToClaim === 7;
+  const txId = `tx_streak_${now}_${Math.random().toString(36).substring(2, 7)}`;
+  const transaction: CoinTransaction = {
+    id: txId,
+    transactionId: txId,
+    userId: targetUser.id,
+    userFullName: targetUser.fullName,
+    username: targetUser.username,
+    amount: rewardCoins,
+    type: 'credit',
+    reason: isSpecialBonus ? '🔥 Day 7 Mega Streak Bonus!' : `🔥 Day ${dayToClaim} Daily Streak Reward`,
+    description: `Claimed daily reward on Day ${dayToClaim} of 7-Day Protocol`,
+    source: 'daily_streak',
+    status: 'completed',
+    date: new Date().toISOString(),
+  };
+  const allTransactions = getAllTransactions();
+  allTransactions.unshift(transaction);
+  saveItems(TRANSACTIONS_STORAGE_KEY, allTransactions);
+  insertSupabaseTransaction(transaction);
+
+  // 3. Send in-app notification
+  createNotification({
+    userId: targetUser.id,
+    type: 'coin_credit',
+    title: isSpecialBonus ? '🏆 Day 7 Special Bonus Claimed!' : `🔥 Day ${dayToClaim} Streak Claimed!`,
+    message: `+${rewardCoins} coins added to your balance! Keep up your daily streak to earn maximum rewards.`,
+  });
+
+  // 4. Update user's streak document
+  const currentStreakRecord = getUserDailyStreak(userId);
+  const updatedStreak: UserDailyStreak = {
+    userId: targetUser.id,
+    currentStreak: dayToClaim,
+    lastClaimDate: new Date().toISOString().split('T')[0],
+    lastClaimTimestamp: now,
+    totalDaysClaimed: (currentStreakRecord.totalDaysClaimed || 0) + 1,
+    history: [
+      {
+        day: dayToClaim,
+        coins: rewardCoins,
+        claimedAt: new Date().toISOString(),
+      },
+      ...(currentStreakRecord.history || []).slice(0, 20),
+    ],
+  };
+  saveUserDailyStreak(updatedStreak);
+
+  return {
+    success: true,
+    coinsAwarded: rewardCoins,
+    day: dayToClaim,
+    nextClaimTimestamp: now + 24 * 60 * 60 * 1000,
+  };
+}
+
+// --- Redeem Codes Storage & Engine ---
+
+export function getAllRedeemCodes(): RedeemCode[] {
+  const codes = getItems<RedeemCode>(REDEEM_CODES_KEY);
+  if (codes.length === 0) {
+    saveItems(REDEEM_CODES_KEY, DEFAULT_REDEEM_CODES);
+    return DEFAULT_REDEEM_CODES;
+  }
+  return codes;
+}
+
+export function saveRedeemCode(codeData: Partial<RedeemCode> & { code: string; rewardCoins: number }): {
+  success: boolean;
+  code?: RedeemCode;
+  error?: string;
+} {
+  const cleanCode = codeData.code.trim().toUpperCase();
+  if (!cleanCode) {
+    return { success: false, error: 'Code cannot be empty.' };
+  }
+  if (codeData.rewardCoins <= 0) {
+    return { success: false, error: 'Reward coins must be greater than 0.' };
+  }
+
+  const all = getAllRedeemCodes();
+  const existingIndex = all.findIndex(
+    (c) => (codeData.id && c.id === codeData.id) || c.code.toUpperCase() === cleanCode
+  );
+
+  let updatedCode: RedeemCode;
+
+  if (existingIndex !== -1 && (!codeData.id || all[existingIndex].id === codeData.id)) {
+    updatedCode = {
+      ...all[existingIndex],
+      code: cleanCode,
+      rewardCoins: Number(codeData.rewardCoins),
+      coins: Number(codeData.rewardCoins),
+      maxUses: Number(codeData.maxUses ?? all[existingIndex].maxUses ?? 0),
+      expiresAt: codeData.expiresAt !== undefined ? codeData.expiresAt : all[existingIndex].expiresAt,
+      status: codeData.status || (codeData.isActive === false ? 'disabled' : 'active'),
+      isActive: codeData.status ? codeData.status === 'active' : codeData.isActive !== false,
+      description: codeData.description ?? all[existingIndex].description,
+    };
+    all[existingIndex] = updatedCode;
+  } else if (existingIndex !== -1 && codeData.id && all[existingIndex].id !== codeData.id) {
+    return { success: false, error: `A code with the name "${cleanCode}" already exists.` };
+  } else {
+    updatedCode = {
+      id: codeData.id || 'code_' + Math.random().toString(36).substring(2, 9),
+      code: cleanCode,
+      rewardCoins: Number(codeData.rewardCoins),
+      coins: Number(codeData.rewardCoins),
+      maxUses: Number(codeData.maxUses ?? 0),
+      usedCount: 0,
+      currentUses: 0,
+      expiresAt: codeData.expiresAt || null,
+      status: codeData.status || 'active',
+      isActive: codeData.status ? codeData.status === 'active' : true,
+      createdAt: new Date().toISOString(),
+      createdByAdminName: codeData.createdByAdminName || 'ASJADFX Admin',
+      description: codeData.description || 'Promotional Reward Code',
+    };
+    all.unshift(updatedCode);
+  }
+
+  saveItems(REDEEM_CODES_KEY, all);
+  notifyDataChanged();
+  return { success: true, code: updatedCode };
+}
+
+export function toggleRedeemCodeStatus(codeId: string): { success: boolean; error?: string } {
+  const all = getAllRedeemCodes();
+  const code = all.find((c) => c.id === codeId);
+  if (!code) return { success: false, error: 'Code not found.' };
+
+  code.status = code.status === 'active' ? 'disabled' : 'active';
+  code.isActive = code.status === 'active';
+  saveItems(REDEEM_CODES_KEY, all);
+  notifyDataChanged();
+  return { success: true };
+}
+
+export function deleteRedeemCode(codeId: string): { success: boolean; error?: string } {
+  const all = getAllRedeemCodes();
+  const remaining = all.filter((c) => c.id !== codeId);
+  saveItems(REDEEM_CODES_KEY, remaining);
+  notifyDataChanged();
+  return { success: true };
+}
+
+export function getAllRedeemLogs(): CodeRedemptionLog[] {
+  return getItems<CodeRedemptionLog>(REDEEM_LOGS_KEY);
+}
+
+export function getUserRedeemLogs(userId: string): CodeRedemptionLog[] {
+  const all = getAllRedeemLogs();
+  return all.filter((l) => l.userId === userId);
+}
+
+/**
+ * Validates and applies a coupon/redeem code for a specific user
+ */
+export function redeemCodeForUser(
+  userId: string,
+  rawCode: string
+): { success: boolean; coinsAwarded?: number; code?: string; error?: string } {
+  const targetUser = findUserById(userId);
+  if (!targetUser) {
+    return { success: false, error: 'User account not found.' };
+  }
+
+  const cleanInput = rawCode.trim().toUpperCase();
+  if (!cleanInput) {
+    return { success: false, error: 'Please enter a reward code.' };
+  }
+
+  const allCodes = getAllRedeemCodes();
+  const matchedCode = allCodes.find((c) => c.code.toUpperCase() === cleanInput);
+
+  if (!matchedCode) {
+    return { success: false, error: `Invalid code "${cleanInput}". Please check spelling and try again.` };
+  }
+
+  // 1. Check if active
+  if (matchedCode.status !== 'active' && matchedCode.isActive === false) {
+    return { success: false, error: 'This reward code is currently inactive or disabled.' };
+  }
+
+  // 2. Check expiry date
+  if (matchedCode.expiresAt) {
+    const expiryTimestamp = new Date(matchedCode.expiresAt).getTime();
+    if (!isNaN(expiryTimestamp) && expiryTimestamp < Date.now()) {
+      return { success: false, error: 'This reward code has expired.' };
+    }
+  }
+
+  // 3. Check maximum uses limit
+  if (matchedCode.maxUses > 0 && (matchedCode.usedCount || 0) >= matchedCode.maxUses) {
+    return { success: false, error: 'This reward code has reached its maximum redemption limit.' };
+  }
+
+  // 4. Check if user already redeemed this code
+  const allLogs = getAllRedeemLogs();
+  const alreadyRedeemed = allLogs.some(
+    (log) => log.userId === userId && log.code.toUpperCase() === cleanInput
+  );
+  if (alreadyRedeemed) {
+    return {
+      success: false,
+      error: `You have already redeemed code "${cleanInput}". Reward codes can only be used once per account.`,
+    };
+  }
+
+  const rewardCoins = Number(matchedCode.rewardCoins || matchedCode.coins || 0);
+
+  // 5. Credit coins to user account
+  targetUser.coins = (targetUser.coins || 0) + rewardCoins;
+  targetUser.coinBalance = targetUser.coins;
+  updateUser(targetUser);
+
+  // 6. Update code usage count
+  matchedCode.usedCount = (matchedCode.usedCount || 0) + 1;
+  matchedCode.currentUses = matchedCode.usedCount;
+  saveItems(REDEEM_CODES_KEY, allCodes);
+
+  // 7. Record redemption log
+  const newLog: CodeRedemptionLog = {
+    id: 'red_' + Math.random().toString(36).substring(2, 9),
+    codeId: matchedCode.id,
+    code: matchedCode.code,
+    userId: targetUser.id,
+    username: targetUser.username,
+    fullName: targetUser.fullName,
+    rewardCoins,
+    redeemedAt: new Date().toISOString(),
+  };
+  const updatedLogs = [newLog, ...allLogs];
+  saveItems(REDEEM_LOGS_KEY, updatedLogs);
+
+  // 8. Record CoinTransaction
+  const txId = `tx_code_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const transaction: CoinTransaction = {
+    id: txId,
+    transactionId: txId,
+    userId: targetUser.id,
+    userFullName: targetUser.fullName,
+    username: targetUser.username,
+    amount: rewardCoins,
+    type: 'credit',
+    reason: `🎁 Redeemed Promo Code: ${matchedCode.code}`,
+    description: `Bonus for redeeming promotional voucher ${matchedCode.code}`,
+    source: 'coupon_redeem',
+    status: 'completed',
+    date: new Date().toISOString(),
+  };
+  const allTransactions = getAllTransactions();
+  allTransactions.unshift(transaction);
+  saveItems(TRANSACTIONS_STORAGE_KEY, allTransactions);
+  insertSupabaseTransaction(transaction);
+
+  // 9. Send Notification
+  createNotification({
+    userId: targetUser.id,
+    type: 'coin_credit',
+    title: '🎁 Reward Code Redeemed!',
+    message: `Voucher "${matchedCode.code}" applied! +${rewardCoins} coins added directly to your balance.`,
+  });
+
+  notifyDataChanged();
+
+  return {
+    success: true,
+    coinsAwarded: rewardCoins,
+    code: matchedCode.code,
+  };
 }
