@@ -139,18 +139,77 @@ export async function uploadScreenshotProofToSupabase(
 // ----------------- Supabase Data API Helpers -----------------
 
 /**
- * Fetch all users from Supabase
+ * Fetch all registered users from Supabase.
+ * Queries all potential user & profile tables and consolidates by unique Supabase Auth UUID.
  */
 export async function fetchSupabaseUsers(): Promise<User[] | null> {
   try {
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) {
-      // Check if table 'profiles' is used instead
+    const userMap = new Map<string, User>();
+
+    // 1. Fetch from 'profiles' table (standard Supabase profile table)
+    try {
       const { data: profilesData, error: profError } = await supabase.from('profiles').select('*');
-      if (profError || !profilesData) return null;
-      return profilesData.map(mapDbUserToModel);
+      if (!profError && Array.isArray(profilesData)) {
+        for (const row of profilesData) {
+          const u = mapDbUserToModel(row);
+          if (u && u.id) {
+            userMap.set(u.id, u);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase profiles query notice:', e);
     }
-    return (data || []).map(mapDbUserToModel);
+
+    // 2. Fetch from 'users' table (custom user table)
+    try {
+      const { data: usersData, error: usersError } = await supabase.from('users').select('*');
+      if (!usersError && Array.isArray(usersData)) {
+        for (const row of usersData) {
+          const u = mapDbUserToModel(row);
+          if (u && u.id) {
+            const existing = userMap.get(u.id);
+            if (existing) {
+              userMap.set(u.id, {
+                ...existing,
+                ...u,
+                fullName: u.fullName || existing.fullName,
+                username: u.username || existing.username,
+                email: u.email || existing.email,
+                avatarUrl: u.avatarUrl || existing.avatarUrl,
+                instagramUsername: u.instagramUsername || existing.instagramUsername,
+                coins: u.coins ?? existing.coins ?? 0,
+                coinBalance: u.coinBalance ?? existing.coinBalance ?? 0,
+                membership_type: u.membership_type || existing.membership_type || 'free',
+                premium_status: u.premium_status || existing.premium_status || 'inactive',
+              });
+            } else {
+              userMap.set(u.id, u);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase users table query notice:', e);
+    }
+
+    // 3. Fetch from 'user_profiles' table (optional alternative)
+    try {
+      const { data: upData, error: upError } = await supabase.from('user_profiles').select('*');
+      if (!upError && Array.isArray(upData)) {
+        for (const row of upData) {
+          const u = mapDbUserToModel(row);
+          if (u && u.id && !userMap.has(u.id)) {
+            userMap.set(u.id, u);
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const result = Array.from(userMap.values());
+    return result;
   } catch (e) {
     console.warn('Supabase fetchUsers error:', e);
     return null;
@@ -158,15 +217,26 @@ export async function fetchSupabaseUsers(): Promise<User[] | null> {
 }
 
 /**
- * Upsert user in Supabase
+ * Upsert user profile in Supabase across all active tables.
  */
 export async function upsertSupabaseUser(user: User): Promise<boolean> {
   try {
     const row = mapModelToDbUser(user);
-    const { error } = await supabase.from('users').upsert(row, { onConflict: 'id' });
-    if (error) {
+    
+    // Upsert into 'profiles'
+    try {
       await supabase.from('profiles').upsert(row, { onConflict: 'id' });
+    } catch (e) {
+      console.warn('Supabase profiles upsert notice:', e);
     }
+
+    // Upsert into 'users'
+    try {
+      await supabase.from('users').upsert(row, { onConflict: 'id' });
+    } catch (e) {
+      console.warn('Supabase users upsert notice:', e);
+    }
+
     return true;
   } catch (e) {
     console.warn('Supabase upsertUser error:', e);
@@ -494,29 +564,38 @@ export async function upsertSupabaseSettings(settings: AdminSystemSettings): Pro
 // ----------------- Data Mappers (snake_case DB <-> camelCase TS Models) -----------------
 
 function mapDbUserToModel(r: any): User {
+  const userId = r.id || r.user_id || r.userId || r.uid || '';
+  const email = (r.email || r.user_email || '').trim().toLowerCase();
+  const defaultName = email ? email.split('@')[0] : 'Trader';
+  const fullName = r.full_name || r.fullName || r.display_name || r.name || defaultName;
+  const username = r.username || r.user_name || (email ? email.split('@')[0] : userId.slice(0, 8));
+  const instagram = r.instagram_username || r.instagramUsername || r.instagram_handle || r.instagram || '';
+  const isAdmin = email === 'asjadarmwrestlingvloge@gmail.com' || email === 'asjadtrades07@gmail.com' || r.role === 'admin';
+  const coins = Number(r.coins ?? r.coin_balance ?? r.coinBalance ?? 0);
+
   return {
-    id: r.id,
-    fullName: r.full_name || r.fullName || '',
-    username: r.username || '',
-    email: r.email || '',
-    instagramUsername: r.instagram_username || r.instagramUsername || '',
+    id: userId,
+    fullName,
+    username,
+    email,
+    instagramUsername: instagram,
     passwordHash: r.password_hash || r.passwordHash || '',
     salt: r.salt || '',
-    coins: Number(r.coins ?? r.coin_balance ?? r.coinBalance ?? 0),
-    coinBalance: Number(r.coins ?? r.coin_balance ?? r.coinBalance ?? 0),
-    avatarUrl: r.avatar_url || r.avatarUrl,
-    role: r.role || 'user',
+    coins,
+    coinBalance: coins,
+    avatarUrl: r.avatar_url || r.avatarUrl || r.avatar || r.picture,
+    role: isAdmin ? 'admin' : (r.role || 'user'),
     createdAt: r.created_at || r.createdAt || new Date().toISOString(),
     lastLoginAt: r.last_login_at || r.lastLoginAt || new Date().toISOString(),
-    status: r.status || 'active',
+    status: r.status || (r.is_banned ? 'banned' : 'active'),
     isRestricted: r.is_restricted ?? r.isRestricted ?? false,
     isBanned: r.is_banned ?? r.isBanned ?? false,
     restrictionExpiresAt: r.restriction_expires_at || r.restrictionExpiresAt,
     warnings: r.warnings ? (typeof r.warnings === 'string' ? JSON.parse(r.warnings) : r.warnings) : [],
     warningCount: r.warning_count ?? r.warningCount ?? (r.warnings?.length || 0),
     tasksCompleted: Number(r.tasks_completed ?? r.tasksCompleted ?? 0),
-    membership_type: (r.membership_type === 'premium' ? 'premium' : 'free'),
-    premium_status: (r.premium_status || 'inactive') as 'inactive' | 'active' | 'expired',
+    membership_type: (r.membership_type === 'premium' || r.membership === 'premium' || r.is_premium ? 'premium' : 'free'),
+    premium_status: ((r.premium_status || (r.is_premium ? 'active' : 'inactive')) as 'inactive' | 'active' | 'expired'),
     premium_started_at: r.premium_started_at || undefined,
     premium_expires_at: r.premium_expires_at || undefined,
   };
@@ -525,10 +604,12 @@ function mapDbUserToModel(r: any): User {
 function mapModelToDbUser(u: User): any {
   return {
     id: u.id,
+    user_id: u.id,
     full_name: u.fullName,
     username: u.username,
     email: u.email,
     instagram_username: u.instagramUsername,
+    instagram_handle: u.instagramUsername,
     password_hash: u.passwordHash,
     salt: u.salt,
     coins: u.coins,

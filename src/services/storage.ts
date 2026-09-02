@@ -400,8 +400,48 @@ export async function syncFromSupabase(): Promise<void> {
       fetchSupabaseSettings(),
     ]);
 
-    if (remoteUsers.status === 'fulfilled' && remoteUsers.value && remoteUsers.value.length > 0) {
-      saveItems(USERS_STORAGE_KEY, remoteUsers.value);
+    if (remoteUsers.status === 'fulfilled' && remoteUsers.value) {
+      const mockUserIds = ['usr_001_arahm', 'usr_002_khan', 'usr_003_example', 'usr_004_zayn', 'usr_005_elena', 'usr_006_marcus'];
+      const mockNames = ['Example User', 'Zayn Trader', 'Elena Petrova', 'Marcus Vance', 'Arahm Trading', 'Khan Forex'];
+
+      const realRemoteUsers = remoteUsers.value.filter(
+        (u) =>
+          !mockUserIds.includes(u.id) &&
+          !u.email.endsWith('@asjadfx.com') &&
+          !mockNames.includes(u.fullName)
+      );
+
+      const currentUsers = getItems<User>(USERS_STORAGE_KEY);
+      const userMap = new Map<string, User>();
+
+      // 1. Add all real remote Supabase users (Supabase Auth & DB is the single source of truth)
+      realRemoteUsers.forEach((u) => {
+        if (u.id) {
+          userMap.set(u.id, u);
+        }
+      });
+
+      // 2. Also preserve any local registered users with actual UUID or unique email if remote query didn't return them yet
+      currentUsers.forEach((u) => {
+        if (
+          !mockUserIds.includes(u.id) &&
+          !mockNames.includes(u.fullName) &&
+          !u.email.endsWith('@asjadfx.com') &&
+          !userMap.has(u.id)
+        ) {
+          const existingByEmail = Array.from(userMap.values()).find(
+            (rem) => rem.email && u.email && rem.email.toLowerCase() === u.email.toLowerCase()
+          );
+          if (!existingByEmail) {
+            userMap.set(u.id, u);
+            upsertSupabaseUser(u).catch(() => {});
+          }
+        }
+      });
+
+      const mergedUsers = Array.from(userMap.values());
+      saveItems(USERS_STORAGE_KEY, mergedUsers);
+      notifyDataChanged();
     }
     if (remoteTasks.status === 'fulfilled' && remoteTasks.value && remoteTasks.value.length > 0) {
       saveItems(TASKS_STORAGE_KEY, remoteTasks.value);
@@ -538,8 +578,22 @@ export async function initializeDatabase(): Promise<void> {
     saveItems(GIVEAWAYS_STORAGE_KEY, cleanedGiveaways);
   }
 
-  // 6. Secure Admin Account Seed (if not already present)
-  const users = getAllUsers();
+  // 6. Purge any legacy sample/mock traders from local storage and Supabase
+  let users = getItems<User>(USERS_STORAGE_KEY);
+  const mockUserIds = ['usr_001_arahm', 'usr_002_khan', 'usr_003_example', 'usr_004_zayn', 'usr_005_elena', 'usr_006_marcus'];
+  const cleanedUsers = users.filter(
+    (u) =>
+      !mockUserIds.includes(u.id) &&
+      !u.email.endsWith('@asjadfx.com') &&
+      !['Example User', 'Zayn Trader', 'Elena Petrova', 'Marcus Vance', 'Arahm Trading', 'Khan Forex'].includes(u.fullName)
+  );
+  if (cleanedUsers.length !== users.length) {
+    saveItems(USERS_STORAGE_KEY, cleanedUsers);
+    users = cleanedUsers;
+    mockUserIds.forEach((id) => deleteSupabaseUser(id));
+  }
+
+  // 6.1 Secure Admin Account Seed (if not already present)
   const adminEmail = 'asjadarmwrestlingvloge@gmail.com';
   const existingAdmin = users.find((u) => u.email.toLowerCase() === adminEmail.toLowerCase());
 
@@ -555,7 +609,8 @@ export async function initializeDatabase(): Promise<void> {
       instagramUsername: 'asjad_trades',
       passwordHash,
       salt,
-      coins: 1000,
+      coins: 0,
+      coinBalance: 0,
       role: 'admin',
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -565,97 +620,6 @@ export async function initializeDatabase(): Promise<void> {
     users.push(adminUser);
     saveItems(USERS_STORAGE_KEY, users);
     upsertSupabaseUser(adminUser);
-  }
-
-  // 6.5 Seed initial ranked community members if none exist yet
-  const nonAdminUsers = users.filter((u) => u.role !== 'admin');
-  if (nonAdminUsers.length === 0) {
-    const sampleTraders: User[] = [
-      {
-        id: 'usr_001_arahm',
-        fullName: 'Arahm Trading',
-        username: 'Arahm',
-        email: 'arahm.trader@asjadfx.com',
-        instagramUsername: 'arahm',
-        coins: 1200,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 14,
-      },
-      {
-        id: 'usr_002_khan',
-        fullName: 'Khan Forex',
-        username: 'Khan.',
-        email: 'khan.fx@asjadfx.com',
-        instagramUsername: 'khan',
-        coins: 1100,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 12,
-      },
-      {
-        id: 'usr_003_example',
-        fullName: 'Example User',
-        username: 'ExampleUser',
-        email: 'example.user@asjadfx.com',
-        instagramUsername: 'example',
-        coins: 950,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 10,
-      },
-      {
-        id: 'usr_004_zayn',
-        fullName: 'Zayn Trader',
-        username: 'TraderZayn',
-        email: 'zayn@asjadfx.com',
-        instagramUsername: 'zayntrades',
-        coins: 850,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 9,
-      },
-      {
-        id: 'usr_005_elena',
-        fullName: 'Elena Petrova',
-        username: 'Elena_FX',
-        email: 'elena@asjadfx.com',
-        instagramUsername: 'elena_forex',
-        coins: 720,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 8,
-      },
-      {
-        id: 'usr_006_marcus',
-        fullName: 'Marcus Vance',
-        username: 'MarcusTrade',
-        email: 'marcus@asjadfx.com',
-        instagramUsername: 'marcus_fx',
-        coins: 600,
-        role: 'user',
-        status: 'active',
-        createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        tasksCompleted: 6,
-      },
-    ];
-
-    sampleTraders.forEach((st) => {
-      users.push(st);
-      upsertSupabaseUser(st);
-    });
-    saveItems(USERS_STORAGE_KEY, users);
   }
 
   // 7. Subscribe to Supabase Real-time updates & pull latest Supabase changes
@@ -1653,6 +1617,41 @@ export function adminAdjustCoins(
 
   notifyDataChanged();
   return { success: true };
+}
+
+/**
+ * Resets all non-admin user coin balances to 0 for Monday Fresh Start / clean platform cycles.
+ * Updates both local storage cache and Supabase cloud database profiles.
+ */
+export async function resetAllUserCoins(adminUser: User): Promise<{ success: boolean; count: number; error?: string }> {
+  if (adminUser.role !== 'admin') {
+    return { success: false, count: 0, error: 'Access Denied: Only administrators can perform a fresh start reset.' };
+  }
+
+  const users = getAllUsers();
+  let count = 0;
+
+  for (const u of users) {
+    if (u.role !== 'admin') {
+      u.coins = 0;
+      u.coinBalance = 0;
+      u.tasksCompleted = 0;
+      updateUser(u);
+      count++;
+    }
+  }
+
+  // Record system reset event in announcements or notifications if needed
+  createNotification({
+    userId: adminUser.id,
+    type: 'admin_broadcast',
+    title: '🔄 Monday Fresh Start Initialized',
+    message: `Successfully reset coin balances to 0 for ${count} community users. All Supabase database profiles synchronized.`,
+    actionUrl: '/admin/users',
+  });
+
+  notifyDataChanged();
+  return { success: true, count };
 }
 
 // ----------------- Leaderboard & Statistics -----------------

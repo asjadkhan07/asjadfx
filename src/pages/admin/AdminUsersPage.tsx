@@ -11,7 +11,10 @@ import {
   banUserByAdmin,
   unbanUserByAdmin,
   deleteUserByAdmin,
+  resetAllUserCoins,
+  syncFromSupabase,
 } from '../../services/storage';
+import { fetchSupabaseUsers } from '../../services/supabase';
 import { User, CoinTransaction, TaskSubmission, UserWarning } from '../../types';
 import {
   Users,
@@ -30,6 +33,12 @@ import {
   History,
   Camera,
   RotateCcw,
+  RefreshCw,
+  Sparkles,
+  Copy,
+  Check,
+  Crown,
+  Fingerprint,
 } from 'lucide-react';
 
 export const AdminUsersPage: React.FC = () => {
@@ -37,6 +46,10 @@ export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [viewModalData, setViewModalData] = useState<{
     user: User;
     submissions: TaskSubmission[];
@@ -57,13 +70,64 @@ export const AdminUsersPage: React.FC = () => {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const reloadUsers = () => {
-    setUsers(getAllUsers());
+  const reloadUsers = async (syncWithRemote = false) => {
+    if (syncWithRemote) {
+      setIsSyncing(true);
+      try {
+        await syncFromSupabase();
+        const loaded = getAllUsers();
+        setUsers(loaded);
+        setNotice({
+          type: 'success',
+          message: `Synchronized ${loaded.length} registered ${loaded.length === 1 ? 'user' : 'users'} directly from Supabase Authentication & Database.`,
+        });
+        setTimeout(() => setNotice(null), 4000);
+      } catch (err) {
+        console.warn('Sync error:', err);
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      setUsers(getAllUsers());
+    }
+  };
+
+  const handleCopyUUID = (id: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => {
+        setCopiedId(prev => (prev === id ? null : prev));
+      }, 2000);
+    }
   };
 
   useEffect(() => {
-    reloadUsers();
+    reloadUsers(true);
   }, []);
+
+  const handleFreshStartReset = async () => {
+    if (!currentAdmin) return;
+    setIsResetting(true);
+    try {
+      const res = await resetAllUserCoins(currentAdmin);
+      if (res.success) {
+        reloadUsers();
+        setResetModalOpen(false);
+        setNotice({
+          type: 'success',
+          message: `Monday Fresh Start applied: ${res.count} users' coin balances reset to 0.`,
+        });
+        setTimeout(() => setNotice(null), 4000);
+      } else {
+        setNotice({ type: 'error', message: res.error || 'Fresh start reset failed.' });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', message: 'Failed to complete reset.' });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleOpenViewModal = (targetUser: User) => {
     const submissions = getUserSubmissions(targetUser.id);
@@ -202,6 +266,28 @@ export const AdminUsersPage: React.FC = () => {
             Search, inspect, credit coins, issue disciplinary warnings, and manage access for all registered members.
           </p>
         </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => reloadUsers(true)}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold flex items-center gap-2 border border-white/10 transition-all font-mono"
+            title="Fetch real users directly from Supabase Authentication & Database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[#F2A900] ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Supabase'}</span>
+          </button>
+
+          <button
+            onClick={() => setResetModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-[#F2A900] text-xs font-bold flex items-center gap-2 border border-[#F2A900]/30 transition-all font-mono shadow-md"
+            title="Reset all community user coin balances to 0 for Monday Fresh Start"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Monday Fresh Start (0 Coins)</span>
+          </button>
+        </div>
       </div>
 
       {notice && (
@@ -245,147 +331,200 @@ export const AdminUsersPage: React.FC = () => {
             <thead>
               <tr className="border-b border-white/5 bg-[#0A0D14]/60 text-slate-400 uppercase font-mono text-[11px]">
                 <th className="py-3.5 px-4">User</th>
+                <th className="py-3.5 px-4">Auth UUID</th>
                 <th className="py-3.5 px-4">Email</th>
                 <th className="py-3.5 px-4">Instagram</th>
-                <th className="py-3.5 px-4">Coins Balance</th>
-                <th className="py-3.5 px-4">Status / Sanctions</th>
+                <th className="py-3.5 px-4">Coin Balance</th>
+                <th className="py-3.5 px-4">Membership</th>
+                <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4">Joined</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredUsers.map(u => (
-                <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#F2A900] to-amber-600 text-black font-extrabold flex items-center justify-center text-xs shrink-0">
-                        {u.fullName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-white flex items-center gap-1.5">
-                          <span>{u.fullName}</span>
-                          {u.role === 'admin' && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#F2A900]/20 text-[#F2A900]">
-                              ADMIN
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-[#F2A900] font-mono">@{u.username}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 px-4 font-mono text-slate-300">{u.email}</td>
-
-                  <td className="py-3.5 px-4 font-mono text-purple-300">
-                    {u.instagramUsername ? `@${u.instagramUsername}` : '—'}
-                  </td>
-
-                  <td className="py-3.5 px-4 font-bold text-[#F2A900] font-mono text-sm">
-                    🪙 {u.coins ?? u.coinBalance ?? 0}
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono ${
-                          u.isBanned
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                            : u.isRestricted
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}
-                      >
-                        {u.isBanned ? 'Banned' : u.isRestricted ? 'Restricted' : 'Active'}
-                      </span>
-
-                      {u.warningCount > 0 && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300">
-                          ⚠️ {u.warningCount} {u.warningCount === 1 ? 'warn' : 'warns'}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                    {new Date(u.createdAt).toLocaleDateString()}
-                  </td>
-
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1">
-                      {/* View details */}
-                      <button
-                        onClick={() => handleOpenViewModal(u)}
-                        title="View Full Profile & History"
-                        className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:text-white cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Edit user */}
-                      <button
-                        onClick={() => setEditModalUser(u)}
-                        title="Edit User Profile"
-                        className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:text-white cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Add/Remove Coins */}
-                      <button
-                        onClick={() => {
-                          setCoinModalUser(u);
-                          setCoinAmount(100);
-                          setCoinAdjustmentType('credit');
-                        }}
-                        title="Adjust Coins"
-                        className="p-1.5 rounded-lg bg-[#F2A900]/15 text-[#F2A900] hover:bg-[#F2A900]/25 cursor-pointer"
-                      >
-                        <Coins className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Warning */}
-                      <button
-                        onClick={() => {
-                          setWarningModalUser(u);
-                          setWarningLevel(1);
-                          setWarningReason('');
-                        }}
-                        title="Issue Disciplinary Warning"
-                        className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 cursor-pointer"
-                      >
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Ban / Unban */}
-                      {u.role !== 'admin' && (
-                        <button
-                          onClick={() => handleToggleBan(u)}
-                          title={u.isBanned ? 'Unban User' : 'Ban User'}
-                          className={`p-1.5 rounded-lg cursor-pointer ${
-                            u.isBanned
-                              ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                              : 'bg-rose-500/15 text-rose-400 hover:bg-rose-500/25'
-                          }`}
-                        >
-                          <Ban className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-
-                      {/* Delete */}
-                      {u.role !== 'admin' && (
-                        <button
-                          onClick={() => setDeleteConfirmUser(u)}
-                          title="Delete User Permanently"
-                          className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-500 font-mono text-xs">
+                    {searchQuery ? 'No registered users match your search query.' : 'No registered users found in Supabase Auth & Database.'}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredUsers.map(u => (
+                  <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        {u.avatarUrl ? (
+                          <img
+                            src={u.avatarUrl}
+                            alt={u.fullName}
+                            referrerPolicy="no-referrer"
+                            className="w-8 h-8 rounded-full object-cover border border-[#F2A900]/30 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#F2A900] to-amber-600 text-black font-extrabold flex items-center justify-center text-xs shrink-0">
+                            {u.fullName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-white flex items-center gap-1.5">
+                            <span>{u.fullName}</span>
+                            {u.role === 'admin' && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#F2A900]/20 text-[#F2A900] border border-[#F2A900]/30">
+                                ADMIN
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#F2A900] font-mono">@{u.username}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Auth UUID with 1-click copy */}
+                    <td className="py-3.5 px-4 font-mono text-[11px]">
+                      <div className="flex items-center gap-1.5 group">
+                        <span className="text-slate-400 font-mono" title={u.id}>
+                          {u.id.length > 13 ? `${u.id.substring(0, 8)}...${u.id.substring(u.id.length - 4)}` : u.id}
+                        </span>
+                        <button
+                          onClick={() => handleCopyUUID(u.id)}
+                          className="p-1 rounded bg-white/5 hover:bg-white/10 text-slate-400 hover:text-[#F2A900] transition-colors cursor-pointer"
+                          title="Copy Full Supabase Auth User UUID"
+                        >
+                          {copiedId === u.id ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-mono text-slate-300">{u.email}</td>
+
+                    <td className="py-3.5 px-4 font-mono text-purple-300">
+                      {u.instagramUsername ? `@${u.instagramUsername}` : '—'}
+                    </td>
+
+                    <td className="py-3.5 px-4 font-bold text-[#F2A900] font-mono text-sm">
+                      🪙 {u.coins ?? u.coinBalance ?? 0}
+                    </td>
+
+                    {/* Membership Status */}
+                    <td className="py-3.5 px-4">
+                      {u.membership_type === 'premium' || u.premium_status === 'active' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-[#F2A900] border border-[#F2A900]/30">
+                          <Crown className="w-3 h-3" />
+                          <span>VIP</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase font-mono bg-slate-800 text-slate-400 border border-white/5">
+                          Free
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono ${
+                            u.isBanned
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              : u.isRestricted
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          }`}
+                        >
+                          {u.isBanned ? 'Banned' : u.isRestricted ? 'Restricted' : 'Active'}
+                        </span>
+
+                        {u.warningCount > 0 && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300">
+                            ⚠️ {u.warningCount} {u.warningCount === 1 ? 'warn' : 'warns'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                      {new Date(u.createdAt).toLocaleDateString()}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        {/* View details */}
+                        <button
+                          onClick={() => handleOpenViewModal(u)}
+                          title="View Full Profile & History"
+                          className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:text-white cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Edit user */}
+                        <button
+                          onClick={() => setEditModalUser(u)}
+                          title="Edit User Profile"
+                          className="p-1.5 rounded-lg bg-white/5 text-slate-300 hover:text-white cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Add/Remove Coins */}
+                        <button
+                          onClick={() => {
+                            setCoinModalUser(u);
+                            setCoinAmount(100);
+                            setCoinAdjustmentType('credit');
+                          }}
+                          title="Adjust Coins"
+                          className="p-1.5 rounded-lg bg-[#F2A900]/15 text-[#F2A900] hover:bg-[#F2A900]/25 cursor-pointer"
+                        >
+                          <Coins className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Warning */}
+                        <button
+                          onClick={() => {
+                            setWarningModalUser(u);
+                            setWarningLevel(1);
+                            setWarningReason('');
+                          }}
+                          title="Issue Disciplinary Warning"
+                          className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 cursor-pointer"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Ban / Unban */}
+                        {u.role !== 'admin' && (
+                          <button
+                            onClick={() => handleToggleBan(u)}
+                            title={u.isBanned ? 'Unban User' : 'Ban User'}
+                            className={`p-1.5 rounded-lg cursor-pointer ${
+                              u.isBanned
+                                ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                                : 'bg-rose-500/15 text-rose-400 hover:bg-rose-500/25'
+                            }`}
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Delete */}
+                        {u.role !== 'admin' && (
+                          <button
+                            onClick={() => setDeleteConfirmUser(u)}
+                            title="Delete User Permanently"
+                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -396,17 +535,56 @@ export const AdminUsersPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
           <div className="w-full max-w-3xl rounded-3xl bg-[#0F131C] border border-white/10 p-6 sm:p-8 space-y-6 shadow-2xl my-8">
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#F2A900] text-black font-black flex items-center justify-center text-sm">
-                  {viewModalData.user.fullName.charAt(0).toUpperCase()}
-                </div>
+              <div className="flex items-center gap-3.5">
+                {viewModalData.user.avatarUrl ? (
+                  <img
+                    src={viewModalData.user.avatarUrl}
+                    alt={viewModalData.user.fullName}
+                    referrerPolicy="no-referrer"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-[#F2A900]/40 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#F2A900] to-amber-600 text-black font-black flex items-center justify-center text-base shrink-0">
+                    {viewModalData.user.fullName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
                     <span>{viewModalData.user.fullName}</span>
                     <span className="text-xs font-mono text-[#F2A900]">@{viewModalData.user.username}</span>
+                    {viewModalData.user.role === 'admin' && (
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#F2A900]/20 text-[#F2A900] border border-[#F2A900]/30">
+                        ADMIN
+                      </span>
+                    )}
+                    {viewModalData.user.membership_type === 'premium' || viewModalData.user.premium_status === 'active' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-[#F2A900] border border-[#F2A900]/30">
+                        <Crown className="w-3 h-3" />
+                        <span>VIP</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase font-mono bg-slate-800 text-slate-400 border border-white/5">
+                        Free
+                      </span>
+                    )}
                   </h3>
-                  <div className="text-xs text-slate-400 font-mono">
-                    {viewModalData.user.email} • Balance: 🪙 {viewModalData.user.coins ?? viewModalData.user.coinBalance ?? 0}
+                  <div className="text-xs text-slate-400 font-mono mt-0.5">
+                    {viewModalData.user.email} {viewModalData.user.instagramUsername ? `• @${viewModalData.user.instagramUsername}` : ''} • Balance: 🪙 {viewModalData.user.coins ?? viewModalData.user.coinBalance ?? 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500">
+                    <span>UUID:</span>
+                    <span className="text-slate-400 select-all">{viewModalData.user.id}</span>
+                    <button
+                      onClick={() => handleCopyUUID(viewModalData.user.id)}
+                      className="p-1 rounded bg-white/5 hover:bg-white/10 text-slate-400 hover:text-[#F2A900] cursor-pointer"
+                      title="Copy Auth UUID"
+                    >
+                      {copiedId === viewModalData.user.id ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -828,6 +1006,52 @@ export const AdminUsersPage: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase tracking-wider"
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Monday Fresh Start Reset Confirmation Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-[#0F131C] border border-[#F2A900]/30 p-6 space-y-5 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#F2A900]/10 border border-[#F2A900]/20 text-[#F2A900] mx-auto flex items-center justify-center">
+              <RotateCcw className="w-6 h-6" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-extrabold text-white">Initialize Monday Fresh Start?</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                This operation will safely reset all community members&apos; coin balances to{' '}
+                <strong className="text-[#F2A900] font-mono">0 coins</strong> in both your local cache and Supabase
+                cloud database. All real registered user accounts, passwords, and profiles will remain intact.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                disabled={isResetting}
+                className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 text-xs font-semibold hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleFreshStartReset}
+                disabled={isResetting}
+                className="px-4 py-2 rounded-xl bg-[#F2A900] hover:bg-[#d99700] text-black text-xs font-extrabold uppercase font-mono tracking-wider flex items-center gap-1.5"
+              >
+                {isResetting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Resetting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Confirm Fresh Start</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
