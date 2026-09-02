@@ -75,15 +75,17 @@ export const AdminUsersPage: React.FC = () => {
       setIsSyncing(true);
       try {
         await syncFromSupabase();
-        const loaded = getAllUsers();
+        const directUsers = await fetchSupabaseUsers();
+        const loaded = directUsers && directUsers.length > 0 ? directUsers : getAllUsers();
         setUsers(loaded);
         setNotice({
           type: 'success',
           message: `Synchronized ${loaded.length} registered ${loaded.length === 1 ? 'user' : 'users'} directly from Supabase Authentication & Database.`,
         });
-        setTimeout(() => setNotice(null), 4000);
+        setTimeout(() => setNotice(null), 4500);
       } catch (err) {
         console.warn('Sync error:', err);
+        setUsers(getAllUsers());
       } finally {
         setIsSyncing(false);
       }
