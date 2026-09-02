@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PremiumUpgradeCard } from './PremiumUpgradeCard';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, currentRoute, navigateTo, logout, unreadNotificationCount } = useAuth();
@@ -129,8 +130,9 @@ export const Navbar: React.FC = () => {
                 </button>
               </nav>
 
-              {/* Login & Highlighted Sign Up */}
+              {/* Login & Highlighted Sign Up & PWA Install */}
               <div className="hidden sm:flex items-center gap-3">
+                <PWAInstallButton variant="nav" />
                 <motion.button
                   id="nav-btn-login"
                   whileHover={{ scale: 1.03 }}
@@ -206,6 +208,11 @@ export const Navbar: React.FC = () => {
                   Coins
                 </span>
               </motion.button>
+
+              {/* PWA Install Button (Desktop) */}
+              <div className="hidden sm:block">
+                <PWAInstallButton variant="nav" />
+              </div>
 
               {/* Notifications Button */}
               <button
@@ -283,6 +290,14 @@ export const Navbar: React.FC = () => {
                         <Coins className="w-4 h-4 text-[#FFD700]" />
                         <span>My Coins ({user?.coins ?? 0})</span>
                       </button>
+
+                      <div className="py-1">
+                        <PWAInstallButton
+                          variant="compact"
+                          className="w-full justify-center"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        />
+                      </div>
 
                       {user?.role === 'admin' && (
                         <button
@@ -377,6 +392,14 @@ export const Navbar: React.FC = () => {
                     <FileText className="w-4 h-4 text-[#00FF66]" />
                     <span>Rules & Guidelines</span>
                   </button>
+
+                  <div className="pt-2">
+                    <PWAInstallButton
+                      variant="drawer"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                  </div>
+
                   <div className="pt-2 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
@@ -421,6 +444,14 @@ export const Navbar: React.FC = () => {
                       </button>
                     );
                   })}
+                  {/* PWA Install Button in Mobile Menu */}
+                  <div className="pt-2 pb-1">
+                    <PWAInstallButton
+                      variant="drawer"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                  </div>
+
                   {/* Upgrade Promotion for Free Users in Mobile Menu */}
                   <div className="pt-2 pb-1">
                     <PremiumUpgradeCard onUpgradeClick={() => setIsMobileMenuOpen(false)} />

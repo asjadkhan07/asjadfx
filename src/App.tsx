@@ -5,6 +5,8 @@ import { MobileNav } from './components/MobileNav';
 import { AsjadAiChatbot } from './components/AsjadAiChatbot';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { CoinRewardAnimation } from './components/CoinRewardAnimation';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 // Public & User Pages
 import { LandingPage } from './pages/LandingPage';
@@ -322,6 +324,8 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <OfflineIndicator />
+      <PWAInstallBanner />
     </AuthProvider>
   );
 }

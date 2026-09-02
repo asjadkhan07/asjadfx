@@ -193,15 +193,64 @@ export const SignupPage: React.FC = () => {
           </motion.div>
         ) : (
           <>
-            {/* General Error Alert */}
+            {/* General Error Alert or User Already Registered Alert */}
             {generalError && (
-              <div
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
                 id="signup-general-error"
-                className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5"
+                className={`mb-5 p-4 rounded-2xl border text-xs sm:text-sm flex flex-col gap-3 ${
+                  generalError.toLowerCase().includes('already exists') ||
+                  generalError.toLowerCase().includes('already registered')
+                    ? 'bg-[#F2A900]/10 border-[#F2A900]/40 text-[#F2A900]'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                }`}
               >
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span>{generalError}</span>
-              </div>
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle
+                    className={`w-5 h-5 shrink-0 mt-0.5 ${
+                      generalError.toLowerCase().includes('already exists') ||
+                      generalError.toLowerCase().includes('already registered')
+                        ? 'text-[#F2A900]'
+                        : 'text-rose-400'
+                    }`}
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-white">
+                      {generalError.toLowerCase().includes('already exists') ||
+                      generalError.toLowerCase().includes('already registered')
+                        ? 'Account Already Registered'
+                        : 'Registration Notice'}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
+                      {generalError}
+                    </p>
+                  </div>
+                </div>
+
+                {(generalError.toLowerCase().includes('already exists') ||
+                  generalError.toLowerCase().includes('already registered')) && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+                    <button
+                      type="button"
+                      id="btn-goto-login-from-error"
+                      onClick={() => navigateTo('/login')}
+                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#F2A900] via-[#FFD700] to-[#F2A900] text-[#05070A] font-extrabold text-xs uppercase tracking-wider shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>LOG IN NOW</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-forgot-pw-from-error"
+                      onClick={() => navigateTo('/forgot-password')}
+                      className="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs transition-all cursor-pointer"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+              </motion.div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -470,20 +519,6 @@ export const SignupPage: React.FC = () => {
                   </>
                 )}
               </button>
-
-              {/* Real Signup Error Message Below Form */}
-              {generalError && (
-                <div
-                  id="signup-error-bottom"
-                  className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-2.5"
-                >
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-rose-200">Signup Failed</p>
-                    <p className="mt-0.5 text-xs text-rose-300/90">{generalError}</p>
-                  </div>
-                </div>
-              )}
             </form>
           </>
         )}

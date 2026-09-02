@@ -8,6 +8,7 @@ import {
   getAllRedeemCodes,
   UserStreakStatus,
 } from '../services/rewards';
+import { DailySpinWheel } from '../components/DailySpinWheel';
 import {
   Gift,
   Flame,
@@ -210,6 +211,15 @@ export const RewardsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* 2. 🎰 DAILY VIP FORTUNE WHEEL */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <DailySpinWheel user={user} onSpinSuccess={() => updateStatus()} />
       </motion.div>
 
       {/* Main Grid: Daily Streak & Redeem Codes */}

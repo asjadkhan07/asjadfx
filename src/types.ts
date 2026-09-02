@@ -39,6 +39,7 @@ export interface User {
   tasksCompleted?: number;
   membership_type?: 'free' | 'premium';
   premium_status?: 'inactive' | 'active' | 'expired';
+  vip_tier?: 'vip_basic' | 'vip_lifetime' | 'none';
   premium_started_at?: string;
   premium_expires_at?: string;
 }
@@ -290,6 +291,7 @@ export interface PremiumPaymentRequest {
   fullName?: string;
   avatarUrl?: string;
   plan_name: string;
+  plan_tier?: 'vip_basic' | 'vip_lifetime';
   amount: number;
   currency: string;
   payment_method: string;
@@ -304,6 +306,19 @@ export interface PremiumPaymentRequest {
   premium_expires_at?: string;
 }
 
+export interface VIPPlanTierConfig {
+  id: 'vip_basic' | 'vip_lifetime';
+  name: string;
+  price: number;
+  durationLabel: string;
+  durationDays: number; // 60 for basic, -1 for lifetime
+  badge: string;
+  tagline: string;
+  spinPoolType: 'basic' | 'pro';
+  benefits: string[];
+  popular?: boolean;
+}
+
 export interface PremiumSettings {
   planName: string;
   price: number;
@@ -315,6 +330,33 @@ export interface PremiumSettings {
   enabled: boolean;
   extraCoinsPercentage: number;
   benefits?: string[];
+  plans?: VIPPlanTierConfig[];
+}
+
+export interface DailySpinRecord {
+  userId: string;
+  lastSpinTimestamp: number;
+  lastSpinDate: string;
+  totalSpins: number;
+  lastRewardCoins: number;
+  spinTier: 'vip_basic' | 'vip_lifetime' | 'basic';
+  history?: {
+    coins: number;
+    timestamp: number;
+    date: string;
+    spinTier: string;
+  }[];
+}
+
+export interface DailySpinStatus {
+  canSpin: boolean;
+  timeRemainingMs: number;
+  nextSpinTimestamp: number;
+  formattedCountdown: string;
+  userTier: 'vip_basic' | 'vip_lifetime' | 'free';
+  rewardPool: number[];
+  lastReward: number | null;
+  totalSpins: number;
 }
 
 export type AppRoute =

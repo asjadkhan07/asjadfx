@@ -19,6 +19,7 @@ import {
   CodeRedemptionLog,
   PremiumPaymentRequest,
   PremiumSettings,
+  VIPPlanTierConfig,
 } from '../types';
 import { generateSalt, hashPassword, verifyPassword, generateToken } from './crypto';
 import {
@@ -64,26 +65,70 @@ const ANNOUNCEMENTS_STORAGE_KEY = 'asjadfx_announcements_db_v1';
 const PREMIUM_REQUESTS_KEY = 'asjadfx_premium_requests_v1';
 const PREMIUM_SETTINGS_KEY = 'asjadfx_premium_settings_v1';
 
+export const DEFAULT_VIP_PLANS: VIPPlanTierConfig[] = [
+  {
+    id: 'vip_basic',
+    name: 'ASJADFX VIP',
+    price: 49,
+    durationLabel: '2 Months',
+    durationDays: 60,
+    badge: '👑 VIP BASIC',
+    tagline: '2-Month Essential Access',
+    spinPoolType: 'basic',
+    benefits: [
+      '👑 Exclusive Gold Crown Badge & Profile Glow',
+      '🪙 +25% Extra Coins on eligible completed tasks',
+      '🎰 VIP BASIC DAILY SPIN (10 to 100 Coins Daily)',
+      '🏆 Leaderboard VIP Highlight & Recognition',
+      '🖼️ Custom Profile Picture upload access',
+      '🎁 Priority Access to Selected Giveaways',
+      '⚡ Standard Dedicated Support',
+    ],
+  },
+  {
+    id: 'vip_lifetime',
+    name: 'ASJADFX VIP PRO / LIFETIME',
+    price: 99,
+    durationLabel: 'Lifetime',
+    durationDays: -1,
+    badge: '⭐ VIP LIFETIME (BEST VALUE)',
+    tagline: 'Unlimited Permanent VIP Status',
+    spinPoolType: 'pro',
+    popular: true,
+    benefits: [
+      '👑 Everything in VIP Basic with ZERO Expiry',
+      '🎰 VIP PRO DAILY SPIN (25 to 500 Coins Daily)',
+      '🪙 Higher bonus rate & priority task approvals',
+      '🏆 Permanent Elite VIP Leaderboard Status',
+      '🖼️ Unlimited Custom Profile Customizations',
+      '🎁 Guaranteed VIP Giveaway Entries & Raffles',
+      '⚡ Priority VIP 24/7 Fast-Track Support',
+      '🚀 Early access to all future trading signals & tools',
+    ],
+  },
+];
+
 export const DEFAULT_PREMIUM_SETTINGS: PremiumSettings = {
-  planName: 'ASJADFX PREMIUM',
+  planName: 'ASJADFX VIP MEMBERSHIP',
   price: 49,
-  durationDays: 120, // 4 months
+  durationDays: 60, // 2 months
   receiverName: 'ASJADFX Official',
   upiId: 'asjadfx@upi',
   qrCodeUrl: '',
   instructions: `1. Scan the official ASJADFX QR code using Google Pay, PhonePe, Paytm, or any UPI app.
-2. Pay the exact amount (₹49).
+2. Pay the exact amount for your chosen plan: ₹49 (2 Months) or ₹99 (Lifetime).
 3. Copy the 12-digit UPI / UTR Transaction ID.
 4. Upload payment screenshot and submit request for verification.`,
   enabled: true,
   extraCoinsPercentage: 25,
+  plans: DEFAULT_VIP_PLANS,
   benefits: [
-    '🪙 +25% Extra Coins on eligible completed tasks',
     '👑 Exclusive Gold Crown Badge & Profile Glow',
+    '🪙 +25% Extra Coins on eligible completed tasks',
+    '🎰 Exclusive 24h VIP Daily Spin Access',
     '🏆 Leaderboard Premium Highlight & Recognition',
     '🖼️ Custom Profile Picture upload access',
     '🎁 Special VIP Giveaway alerts & priority access',
-    '⚡ Early access to new platform features & trading events',
   ],
 };
 
@@ -402,14 +447,9 @@ export async function syncFromSupabase(): Promise<void> {
 
     if (remoteUsers.status === 'fulfilled' && remoteUsers.value) {
       const mockUserIds = ['usr_001_arahm', 'usr_002_khan', 'usr_003_example', 'usr_004_zayn', 'usr_005_elena', 'usr_006_marcus'];
-      const mockNames = ['Example User', 'Zayn Trader', 'Elena Petrova', 'Marcus Vance', 'Arahm Trading', 'Khan Forex'];
 
-      const realRemoteUsers = remoteUsers.value.filter(
-        (u) =>
-          !mockUserIds.includes(u.id) &&
-          !u.email.endsWith('@asjadfx.com') &&
-          !mockNames.includes(u.fullName)
-      );
+      // Only filter out legacy mock IDs, never filter out real users or valid email domains
+      const realRemoteUsers = remoteUsers.value.filter((u) => !mockUserIds.includes(u.id));
 
       const currentUsers = getItems<User>(USERS_STORAGE_KEY);
       const userMap = new Map<string, User>();
@@ -423,12 +463,7 @@ export async function syncFromSupabase(): Promise<void> {
 
       // 2. Also preserve any local registered users with actual UUID or unique email if remote query didn't return them yet
       currentUsers.forEach((u) => {
-        if (
-          !mockUserIds.includes(u.id) &&
-          !mockNames.includes(u.fullName) &&
-          !u.email.endsWith('@asjadfx.com') &&
-          !userMap.has(u.id)
-        ) {
+        if (!mockUserIds.includes(u.id) && !userMap.has(u.id)) {
           const existingByEmail = Array.from(userMap.values()).find(
             (rem) => rem.email && u.email && rem.email.toLowerCase() === u.email.toLowerCase()
           );
@@ -2777,6 +2812,7 @@ export function createPremiumPaymentRequest(
     transaction_id: string;
     payment_screenshot_url?: string;
     amount?: number;
+    plan_tier?: 'vip_basic' | 'vip_lifetime';
   }
 ): { success: boolean; request?: PremiumPaymentRequest; error?: string } {
   const cleanTxId = (data.transaction_id || '').trim();
@@ -2809,7 +2845,11 @@ export function createPremiumPaymentRequest(
     };
   }
 
-  const settings = getPremiumSettings();
+  const selectedTier: 'vip_basic' | 'vip_lifetime' =
+    data.plan_tier || (data.amount === 99 ? 'vip_lifetime' : 'vip_basic');
+  const planName = selectedTier === 'vip_lifetime' ? 'ASJADFX VIP PRO / LIFETIME' : 'ASJADFX VIP';
+  const planAmount = selectedTier === 'vip_lifetime' ? 99 : 49;
+
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
   const newRequest: PremiumPaymentRequest = {
@@ -2821,8 +2861,9 @@ export function createPremiumPaymentRequest(
     email: user.email,
     fullName: user.fullName,
     avatarUrl: user.avatarUrl,
-    plan_name: settings.planName || 'ASJADFX PREMIUM',
-    amount: data.amount ?? settings.price ?? 49,
+    plan_name: planName,
+    plan_tier: selectedTier,
+    amount: data.amount ?? planAmount,
     currency: 'INR',
     payment_method: 'Manual QR / UPI Transfer',
     transaction_id: cleanTxId,
@@ -2838,8 +2879,8 @@ export function createPremiumPaymentRequest(
   createNotification({
     userId: user.id,
     type: 'admin_broadcast',
-    title: '👑 Payment Request Received',
-    message: `Your payment request of ₹${newRequest.amount} (Ref: ${cleanTxId}) is under review. Our team will verify and activate your Premium shortly.`,
+    title: '👑 VIP Payment Request Received',
+    message: `Your payment request of ₹${newRequest.amount} for ${planName} (Ref: ${cleanTxId}) is under review. Our team will verify and activate your VIP perks shortly.`,
     actionUrl: '/premium',
   });
 
@@ -2871,41 +2912,57 @@ export function approvePremiumPaymentRequest(
     return { success: false, error: 'Target user account not found.' };
   }
 
-  const settings = getPremiumSettings();
-  const durationDays = customDays || settings.durationDays || 120; // 4 months default
+  const isLifetime =
+    req.plan_tier === 'vip_lifetime' ||
+    req.amount === 99 ||
+    customDays === -1 ||
+    req.plan_name.toUpperCase().includes('LIFETIME');
+
+  const durationDays = isLifetime ? -1 : customDays || 60; // 60 days default for VIP Basic
 
   const now = new Date();
-  // If user is already active premium, extend from their current expiry date
-  let startDate = now;
-  let currentExpiry = targetUser.premium_expires_at ? new Date(targetUser.premium_expires_at) : null;
-  if (targetUser.membership_type === 'premium' && targetUser.premium_status === 'active' && currentExpiry && currentExpiry > now) {
-    startDate = currentExpiry;
-  }
+  let expiryDate: Date | null = null;
+  let expiryIsoString: string | undefined = undefined;
 
-  const expiryDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  if (!isLifetime) {
+    let startDate = now;
+    let currentExpiry = targetUser.premium_expires_at ? new Date(targetUser.premium_expires_at) : null;
+    if (
+      targetUser.membership_type === 'premium' &&
+      targetUser.premium_status === 'active' &&
+      currentExpiry &&
+      currentExpiry > now
+    ) {
+      startDate = currentExpiry;
+    }
+    expiryDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    expiryIsoString = expiryDate.toISOString();
+  }
 
   // 1. Update request status
   req.payment_status = 'approved';
   req.reviewed_at = new Date().toISOString();
   req.reviewed_by = adminUser.fullName || adminUser.username;
   req.premium_started_at = now.toISOString();
-  req.premium_expires_at = expiryDate.toISOString();
+  req.premium_expires_at = expiryIsoString;
   allRequests[reqIndex] = req;
   saveItems(PREMIUM_REQUESTS_KEY, allRequests);
 
   // 2. Activate user Premium status
   targetUser.membership_type = 'premium';
   targetUser.premium_status = 'active';
+  targetUser.vip_tier = isLifetime ? 'vip_lifetime' : 'vip_basic';
   targetUser.premium_started_at = targetUser.premium_started_at || now.toISOString();
-  targetUser.premium_expires_at = expiryDate.toISOString();
+  targetUser.premium_expires_at = expiryIsoString;
   updateUser(targetUser);
 
   // 3. Dispatch celebration notification to user
+  const durationText = isLifetime ? 'LIFETIME (Permanent Access)' : `ACTIVE until ${expiryDate?.toLocaleDateString()}`;
   createNotification({
     userId: targetUser.id,
     type: 'admin_broadcast',
-    title: '👑 Welcome to ASJADFX Premium!',
-    message: `Payment verified! Your ${req.plan_name} is now ACTIVE until ${expiryDate.toLocaleDateString()}. Enjoy +25% extra coins on tasks and VIP perks!`,
+    title: isLifetime ? '⭐ Welcome to ASJADFX VIP LIFETIME!' : '👑 Welcome to ASJADFX VIP!',
+    message: `Payment verified! Your ${req.plan_name} is now ${durationText}. Daily VIP Spin is unlocked!`,
     actionUrl: '/premium',
   });
 
@@ -2948,7 +3005,7 @@ export function rejectPremiumPaymentRequest(
   createNotification({
     userId: req.userId || req.user_id || '',
     type: 'admin_broadcast',
-    title: '❌ Premium Payment Verification Update',
+    title: '❌ VIP Payment Verification Update',
     message: `Your payment request for ₹${req.amount} could not be verified. Reason: "${reason}". You may re-submit with correct details.`,
     actionUrl: '/premium',
   });
@@ -2964,7 +3021,8 @@ export function manuallySetUserPremium(
   userId: string,
   isPremium: boolean,
   durationDays: number,
-  adminUser: User
+  adminUser: User,
+  tier: 'vip_basic' | 'vip_lifetime' = 'vip_basic'
 ): { success: boolean; user?: User; error?: string } {
   const targetUser = findUserById(userId);
   if (!targetUser) {
@@ -2973,29 +3031,36 @@ export function manuallySetUserPremium(
 
   const now = new Date();
   if (isPremium) {
-    const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const isLifetime = durationDays === -1 || tier === 'vip_lifetime';
+    const expiryIso = isLifetime
+      ? undefined
+      : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
     targetUser.membership_type = 'premium';
     targetUser.premium_status = 'active';
+    targetUser.vip_tier = isLifetime ? 'vip_lifetime' : 'vip_basic';
     targetUser.premium_started_at = now.toISOString();
-    targetUser.premium_expires_at = expiryDate.toISOString();
+    targetUser.premium_expires_at = expiryIso;
 
+    const label = isLifetime ? 'VIP LIFETIME (Permanent)' : `VIP for ${durationDays} days`;
     createNotification({
       userId: targetUser.id,
       type: 'admin_broadcast',
-      title: '👑 ASJADFX Premium Activated!',
-      message: `Admin has activated your Premium membership for ${durationDays} days (Expires: ${expiryDate.toLocaleDateString()}).`,
+      title: '👑 ASJADFX VIP Activated!',
+      message: `Admin has activated your ${label}. Daily VIP Spin is unlocked!`,
       actionUrl: '/premium',
     });
   } else {
     targetUser.membership_type = 'free';
     targetUser.premium_status = 'inactive';
+    targetUser.vip_tier = 'none';
     targetUser.premium_expires_at = undefined;
 
     createNotification({
       userId: targetUser.id,
       type: 'admin_broadcast',
       title: 'ℹ️ Membership Update',
-      message: 'Your Premium membership status has been updated by Admin.',
+      message: 'Your VIP membership status has been updated by Admin.',
       actionUrl: '/premium',
     });
   }
@@ -3039,4 +3104,45 @@ export function extendUserPremium(
 
   notifyDataChanged();
   return { success: true, user: targetUser };
+}
+
+/**
+ * "Monday Fresh Start" Coin Balance Reset:
+ * Safely resets all users' coin balance to 0 in both storage and Supabase database.
+ */
+export function resetAllUsersCoinsMonday(adminUser?: User): { success: boolean; count: number; error?: string } {
+  const users = getAllUsers();
+  let count = 0;
+
+  users.forEach((u) => {
+    u.coins = 0;
+    u.coinBalance = 0;
+    updateUser(u);
+    count++;
+  });
+
+  // Record Admin transaction log
+  if (adminUser) {
+    const txId = `tx_reset_${Date.now()}`;
+    const resetTx: CoinTransaction = {
+      id: txId,
+      transactionId: txId,
+      userId: adminUser.id,
+      userFullName: adminUser.fullName,
+      username: adminUser.username,
+      amount: 0,
+      type: 'debit',
+      reason: '🧹 Monday Fresh Start Reset',
+      description: `All ${count} user coin balances were reset to 0 for Monday Fresh Start`,
+      source: 'admin',
+      date: new Date().toISOString(),
+      status: 'completed',
+    };
+    const txs = getAllTransactions();
+    txs.unshift(resetTx);
+    saveItems(TRANSACTIONS_STORAGE_KEY, txs);
+  }
+
+  notifyDataChanged();
+  return { success: true, count };
 }

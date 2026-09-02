@@ -140,20 +140,60 @@ export async function uploadScreenshotProofToSupabase(
 
 /**
  * Fetch all registered users from Supabase.
- * Queries all potential user & profile tables and consolidates by unique Supabase Auth UUID.
+ * Authoritative integration that combines server-side Supabase Auth user enumeration
+ * with profiles and custom user tables.
  */
 export async function fetchSupabaseUsers(): Promise<User[] | null> {
   try {
     const userMap = new Map<string, User>();
 
-    // 1. Fetch from 'profiles' table (standard Supabase profile table)
+    // 1. First, call our secure server-side endpoint which queries Supabase Auth Admin & DB without exposing service role key
+    try {
+      const resp = await fetch('/api/admin/supabase-users');
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.success && Array.isArray(json.users)) {
+          for (const rawUser of json.users) {
+            const u = mapDbUserToModel(rawUser);
+            if (u && u.id) {
+              userMap.set(u.id, u);
+            }
+          }
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Server Supabase users endpoint notice:', apiErr);
+    }
+
+    // 2. Query 'profiles' table (standard Supabase profile table)
     try {
       const { data: profilesData, error: profError } = await supabase.from('profiles').select('*');
       if (!profError && Array.isArray(profilesData)) {
         for (const row of profilesData) {
           const u = mapDbUserToModel(row);
           if (u && u.id) {
-            userMap.set(u.id, u);
+            const existing = userMap.get(u.id);
+            if (existing) {
+              userMap.set(u.id, {
+                ...existing,
+                ...u,
+                fullName: u.fullName || existing.fullName,
+                username: u.username || existing.username,
+                email: u.email || existing.email,
+                instagramUsername: u.instagramUsername || existing.instagramUsername,
+                avatarUrl: u.avatarUrl || existing.avatarUrl,
+                coins: u.coins ?? existing.coins ?? 0,
+                coinBalance: u.coinBalance ?? existing.coinBalance ?? 0,
+                role: existing.role === 'admin' ? 'admin' : u.role,
+                status: u.status || existing.status,
+                isBanned: u.isBanned || existing.isBanned,
+                isRestricted: u.isRestricted || existing.isRestricted,
+                membership_type: u.membership_type || existing.membership_type || 'free',
+                premium_status: u.premium_status || existing.premium_status || 'inactive',
+              });
+            } else {
+              userMap.set(u.id, u);
+            }
           }
         }
       }
@@ -161,7 +201,7 @@ export async function fetchSupabaseUsers(): Promise<User[] | null> {
       console.warn('Supabase profiles query notice:', e);
     }
 
-    // 2. Fetch from 'users' table (custom user table)
+    // 3. Query 'users' table (custom user table)
     try {
       const { data: usersData, error: usersError } = await supabase.from('users').select('*');
       if (!usersError && Array.isArray(usersData)) {
@@ -180,6 +220,7 @@ export async function fetchSupabaseUsers(): Promise<User[] | null> {
                 instagramUsername: u.instagramUsername || existing.instagramUsername,
                 coins: u.coins ?? existing.coins ?? 0,
                 coinBalance: u.coinBalance ?? existing.coinBalance ?? 0,
+                role: existing.role === 'admin' ? 'admin' : u.role,
                 membership_type: u.membership_type || existing.membership_type || 'free',
                 premium_status: u.premium_status || existing.premium_status || 'inactive',
               });
@@ -193,7 +234,7 @@ export async function fetchSupabaseUsers(): Promise<User[] | null> {
       console.warn('Supabase users table query notice:', e);
     }
 
-    // 3. Fetch from 'user_profiles' table (optional alternative)
+    // 4. Query 'user_profiles' table (alternative profile table)
     try {
       const { data: upData, error: upError } = await supabase.from('user_profiles').select('*');
       if (!upError && Array.isArray(upData)) {
@@ -208,7 +249,9 @@ export async function fetchSupabaseUsers(): Promise<User[] | null> {
       // ignore
     }
 
-    const result = Array.from(userMap.values());
+    // Filter out only legacy demo mock accounts
+    const mockUserIds = ['usr_001_arahm', 'usr_002_khan', 'usr_003_example', 'usr_004_zayn', 'usr_005_elena', 'usr_006_marcus'];
+    const result = Array.from(userMap.values()).filter((u) => !mockUserIds.includes(u.id));
     return result;
   } catch (e) {
     console.warn('Supabase fetchUsers error:', e);
