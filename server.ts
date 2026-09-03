@@ -614,7 +614,7 @@ ${newRequest.conversationSnippet ? `Conversation Snippet:\n${newRequest.conversa
   // =========================================================================
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0', port: PORT },
+      server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);

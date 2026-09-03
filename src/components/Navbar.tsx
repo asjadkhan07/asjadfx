@@ -21,6 +21,8 @@ import {
   ArrowRight,
   Shield,
   Crown,
+  Wallet,
+  Heart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PremiumUpgradeCard } from './PremiumUpgradeCard';
@@ -49,6 +51,8 @@ export const Navbar: React.FC = () => {
     { label: 'Tasks', route: '/tasks', icon: <Target className="w-4 h-4" /> },
     { label: 'Leaderboard', route: '/leaderboard', icon: <Trophy className="w-4 h-4" /> },
     { label: 'Rewards', route: '/rewards', icon: <Gift className="w-4 h-4" /> },
+    { label: '👛 Wallet', route: '/wallet', icon: <Wallet className="w-4 h-4 text-[#00FF66]" /> },
+    { label: '❤️ Donation', route: '/donation', icon: <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" /> },
     { label: 'Giveaway', route: '/giveaway', icon: <Sparkles className="w-4 h-4" /> },
     { label: '👑 Premium', route: '/premium', icon: <Crown className="w-4 h-4 text-[#FFD700]" /> },
     { label: 'My Coins', route: '/coins', icon: <Coins className="w-4 h-4" /> },
@@ -209,6 +213,21 @@ export const Navbar: React.FC = () => {
                 </span>
               </motion.button>
 
+              {/* Wallet Capsule (₹) */}
+              <motion.button
+                id="header-wallet-badge"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigateTo('/wallet')}
+                title="Wallet Balance (₹)"
+                className="bg-[#0F131C] px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer border border-[#00FF66]/30 hover:border-[#00FF66] shadow-[0_0_15px_rgba(0,255,102,0.15)] group"
+              >
+                <span className="text-sm select-none">👛</span>
+                <span className="font-mono font-black text-[#00FF66] text-xs sm:text-sm">
+                  ₹{(user?.walletBalance ?? 0).toLocaleString('en-IN')}
+                </span>
+              </motion.button>
+
               {/* PWA Install Button (Desktop) */}
               <div className="hidden sm:block">
                 <PWAInstallButton variant="nav" />
@@ -289,6 +308,30 @@ export const Navbar: React.FC = () => {
                       >
                         <Coins className="w-4 h-4 text-[#FFD700]" />
                         <span>My Coins ({user?.coins ?? 0})</span>
+                      </button>
+
+                      <button
+                        id="dropdown-wallet-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigateTo('/wallet');
+                        }}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <Wallet className="w-4 h-4 text-[#00FF66]" />
+                        <span>My Wallet (₹{(user?.walletBalance ?? 0).toLocaleString('en-IN')})</span>
+                      </button>
+
+                      <button
+                        id="dropdown-donation-btn"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigateTo('/donation');
+                        }}
+                        className="w-full px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />
+                        <span>❤️ Donation Wall</span>
                       </button>
 
                       <div className="py-1">

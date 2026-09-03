@@ -5,6 +5,8 @@ import {
   getAllSubmissions,
   getAllTasks,
   getPlatforms,
+  getAllWalletTransactions,
+  getAllDonations,
 } from '../../services/storage';
 import { TaskSubmission, Task, PlatformConfig } from '../../types';
 import {
@@ -19,6 +21,8 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertTriangle,
+  Wallet,
+  Heart,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -27,12 +31,18 @@ export const AdminDashboardPage: React.FC = () => {
   const [recentSubmissions, setRecentSubmissions] = useState<TaskSubmission[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [platforms, setPlatforms] = useState<PlatformConfig[]>([]);
+  const [pendingWalletCount, setPendingWalletCount] = useState<number>(0);
+  const [pendingDonationsCount, setPendingDonationsCount] = useState<number>(0);
 
   useEffect(() => {
     setStats(getAdminDashboardStats());
     setRecentSubmissions(getAllSubmissions().slice(0, 5));
     setTasks(getAllTasks());
     setPlatforms(getPlatforms());
+    const allTxs = getAllWalletTransactions();
+    setPendingWalletCount(allTxs.filter((t) => t.status === 'pending').length);
+    const allDon = getAllDonations();
+    setPendingDonationsCount(allDon.filter((d) => d.status === 'pending').length);
   }, []);
 
   return (
@@ -52,7 +62,31 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => navigateTo('/admin/wallet')}
+            className="px-4 py-2.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 hover:bg-[#00FF66]/20 text-[#00FF66] text-xs font-bold cursor-pointer flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(0,255,102,0.15)]"
+          >
+            <Wallet className="w-4 h-4 text-[#00FF66]" />
+            <span>Wallet Deposits</span>
+            {pendingWalletCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[#00FF66] text-black text-[10px] font-mono font-black ml-1">
+                {pendingWalletCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => navigateTo('/admin/donations')}
+            className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-400 text-xs font-bold cursor-pointer flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+          >
+            <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />
+            <span>Donations</span>
+            {pendingDonationsCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-mono font-black ml-1">
+                {pendingDonationsCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => navigateTo('/admin/tasks')}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#F2A900] via-[#FFD700] to-[#F2A900] hover:opacity-90 text-[#05070A] font-extrabold text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(242,169,0,0.2)] transition-all cursor-pointer flex items-center gap-1.5"

@@ -336,7 +336,7 @@ export const AdminUsersPage: React.FC = () => {
                 <th className="py-3.5 px-4">Auth UUID</th>
                 <th className="py-3.5 px-4">Email</th>
                 <th className="py-3.5 px-4">Instagram</th>
-                <th className="py-3.5 px-4">Coin Balance</th>
+                <th className="py-3.5 px-4">Coins / Wallet</th>
                 <th className="py-3.5 px-4">Membership</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4">Joined</th>
@@ -407,8 +407,11 @@ export const AdminUsersPage: React.FC = () => {
                       {u.instagramUsername ? `@${u.instagramUsername}` : '—'}
                     </td>
 
-                    <td className="py-3.5 px-4 font-bold text-[#F2A900] font-mono text-sm">
-                      🪙 {u.coins ?? u.coinBalance ?? 0}
+                    <td className="py-3.5 px-4 font-mono">
+                      <div className="font-bold text-[#F2A900] text-xs">🪙 {u.coins ?? u.coinBalance ?? 0}</div>
+                      <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+                        ₹{Number(u.walletBalance ?? u.wallet_balance ?? 0).toLocaleString('en-IN')}
+                      </div>
                     </td>
 
                     {/* Membership Status */}
@@ -571,7 +574,7 @@ export const AdminUsersPage: React.FC = () => {
                     )}
                   </h3>
                   <div className="text-xs text-slate-400 font-mono mt-0.5">
-                    {viewModalData.user.email} {viewModalData.user.instagramUsername ? `• @${viewModalData.user.instagramUsername}` : ''} • Balance: 🪙 {viewModalData.user.coins ?? viewModalData.user.coinBalance ?? 0}
+                    {viewModalData.user.email} {viewModalData.user.instagramUsername ? `• @${viewModalData.user.instagramUsername}` : ''} • Coins: 🪙 {viewModalData.user.coins ?? viewModalData.user.coinBalance ?? 0} • Wallet: ₹{Number(viewModalData.user.walletBalance ?? viewModalData.user.wallet_balance ?? 0).toLocaleString('en-IN')}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500">
                     <span>UUID:</span>

@@ -615,6 +615,7 @@ function mapDbUserToModel(r: any): User {
   const instagram = r.instagram_username || r.instagramUsername || r.instagram_handle || r.instagram || '';
   const isAdmin = email === 'asjadarmwrestlingvloge@gmail.com' || email === 'asjadtrades07@gmail.com' || r.role === 'admin';
   const coins = Number(r.coins ?? r.coin_balance ?? r.coinBalance ?? 0);
+  const walletBalance = Number(r.wallet_balance ?? r.walletBalance ?? 0);
 
   return {
     id: userId,
@@ -626,6 +627,8 @@ function mapDbUserToModel(r: any): User {
     salt: r.salt || '',
     coins,
     coinBalance: coins,
+    walletBalance,
+    wallet_balance: walletBalance,
     avatarUrl: r.avatar_url || r.avatarUrl || r.avatar || r.picture,
     role: isAdmin ? 'admin' : (r.role || 'user'),
     createdAt: r.created_at || r.createdAt || new Date().toISOString(),
@@ -657,6 +660,8 @@ function mapModelToDbUser(u: User): any {
     salt: u.salt,
     coins: u.coins,
     coin_balance: u.coins,
+    wallet_balance: u.walletBalance ?? 0,
+    walletBalance: u.walletBalance ?? 0,
     avatar_url: u.avatarUrl || null,
     role: u.role,
     created_at: u.createdAt,

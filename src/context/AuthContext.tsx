@@ -56,11 +56,15 @@ const ALL_VALID_ROUTES: AppRoute[] = [
   '/tasks',
   '/leaderboard',
   '/giveaway',
+  '/premium',
   '/profile',
   '/coins',
+  '/rewards',
+  '/wallet',
   '/admin',
   '/admin/login',
   '/admin/dashboard',
+  '/admin/premium',
   '/admin/tasks',
   '/admin/platforms',
   '/admin/submissions',
@@ -72,6 +76,8 @@ const ALL_VALID_ROUTES: AppRoute[] = [
   '/admin/rules',
   '/admin/warnings',
   '/admin/settings',
+  '/admin/rewards',
+  '/admin/wallet',
 ];
 
 function getInitialRoute(): AppRoute {

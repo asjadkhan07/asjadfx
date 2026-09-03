@@ -37,11 +37,16 @@ export interface User {
   warnings?: UserWarning[];
   warningCount?: number;
   tasksCompleted?: number;
+  walletBalance?: number; // Real wallet balance in INR (₹)
+  wallet_balance?: number; // DB alias
   membership_type?: 'free' | 'premium';
   premium_status?: 'inactive' | 'active' | 'expired';
   vip_tier?: 'vip_basic' | 'vip_lifetime' | 'none';
   premium_started_at?: string;
   premium_expires_at?: string;
+  customDpUrl?: string;
+  showInVipShowcase?: boolean; // Privacy control: Default false
+  vipAvatarChoice?: string; // 1 of 10 fixed premium avatars for VIP Basic
 }
 
 export interface SessionData {
@@ -339,7 +344,9 @@ export interface DailySpinRecord {
   lastSpinDate: string;
   totalSpins: number;
   lastRewardCoins: number;
-  spinTier: 'vip_basic' | 'vip_lifetime' | 'basic';
+  spinTier: 'vip_basic' | 'vip_lifetime' | 'basic' | 'free';
+  spinsUsedToday?: number;
+  dayKey?: string; // e.g. YYYY-MM-DD
   history?: {
     coins: number;
     timestamp: number;
@@ -357,6 +364,107 @@ export interface DailySpinStatus {
   rewardPool: number[];
   lastReward: number | null;
   totalSpins: number;
+  spinsRemainingToday: number;
+  totalSpinsAllowed: number;
+  dailyResetTimestamp: number;
+}
+
+export type WalletTransactionType =
+  | 'deposit'
+  | 'admin_credit'
+  | 'admin_debit'
+  | 'withdrawal_request'
+  | 'transfer_sent'
+  | 'transfer_received'
+  | 'donation';
+
+export type WalletTransactionStatus = 'pending' | 'successful' | 'rejected';
+
+export interface WalletTransaction {
+  id: string; // e.g. wtx_...
+  userId: string;
+  userFullName?: string;
+  username?: string;
+  userEmail?: string;
+  amount: number; // in INR (₹)
+  type: WalletTransactionType;
+  status: WalletTransactionStatus;
+  referenceId: string; // UTR or Transaction ID
+  paymentMethod: string; // 'UPI / QR Transfer', 'Wallet Transfer', etc.
+  screenshotUrl?: string; // payment screenshot
+  date: string; // ISO date
+  notes?: string;
+  adminNotes?: string;
+  reviewedByAdminId?: string;
+  reviewedByAdminName?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  balanceAfter?: number;
+  recipientUserId?: string;
+  recipientUsername?: string;
+  recipientFullName?: string;
+  senderUserId?: string;
+  senderUsername?: string;
+  senderFullName?: string;
+}
+
+export interface VipChatMessage {
+  id: string;
+  userId: string;
+  username: string;
+  userFullName: string;
+  avatarUrl?: string;
+  vipTier: 'vip_lifetime' | 'vip_basic';
+  message: string;
+  timestamp: string;
+  isDeleted?: boolean;
+  reportedBy?: string[];
+  reportsCount?: number;
+}
+
+export interface WalletConfig {
+  minDepositAmount: number; // default 10
+  upiId: string;
+  receiverName: string;
+  qrCodeUrl?: string;
+  instructions: string;
+  enabled: boolean;
+}
+
+export type DonationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Donation {
+  id: string; // e.g. don_...
+  userId: string;
+  userFullName?: string;
+  username?: string;
+  userEmail?: string;
+  amount: number; // in INR (₹)
+  status: DonationStatus;
+  referenceId: string; // UTR or Transaction ID
+  paymentMethod: string; // 'UPI', 'Wallet Balance'
+  screenshotUrl?: string; // payment screenshot
+  isAnonymous: boolean; // if true, masked on public leaderboard
+  message?: string; // donor's supportive note
+  date: string; // ISO date
+  causeTitle?: string;
+  reviewedByAdminId?: string;
+  reviewedByAdminName?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+  thankYouShownToUser?: boolean; // tracks if popup was shown
+}
+
+export interface DonationConfig {
+  upiId: string;
+  receiverName: string;
+  qrCodeUrl?: string;
+  beneficiaryName: string;
+  causeTitle: string;
+  causeDescription: string;
+  goalAmount?: number;
+  instructions: string;
+  enabled: boolean;
 }
 
 export type AppRoute =
@@ -375,6 +483,10 @@ export type AppRoute =
   | '/profile'
   | '/coins'
   | '/rewards'
+  | '/wallet'
+  | '/donation'
+  | '/vip-chat'
+  | '/vip-members'
   // Admin Routes
   | '/admin'
   | '/admin/login'
@@ -391,4 +503,6 @@ export type AppRoute =
   | '/admin/rules'
   | '/admin/warnings'
   | '/admin/settings'
-  | '/admin/rewards';
+  | '/admin/rewards'
+  | '/admin/wallet'
+  | '/admin/donations';

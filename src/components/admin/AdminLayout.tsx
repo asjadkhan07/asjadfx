@@ -23,8 +23,10 @@ import {
   X,
   ShieldCheck,
   Crown,
+  Wallet,
+  Heart,
 } from 'lucide-react';
-import { getAllPremiumRequests } from '../../services/storage';
+import { getAllPremiumRequests, getAllWalletTransactions, getAllDonations } from '../../services/storage';
 
 interface NavItem {
   name: string;
@@ -39,9 +41,25 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const allPremiumRequests = getAllPremiumRequests();
   const pendingPremiumCount = allPremiumRequests.filter((r) => r.payment_status === 'pending').length;
+  const allWalletTxs = getAllWalletTransactions();
+  const pendingWalletCount = allWalletTxs.filter((t) => t.status === 'pending').length;
+  const allDonations = getAllDonations();
+  const pendingDonationCount = allDonations.filter((d) => d.status === 'pending').length;
 
   const navItems: NavItem[] = [
     { name: 'Dashboard', route: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    {
+      name: 'Wallet Deposits',
+      route: '/admin/wallet',
+      icon: <Wallet className="w-4 h-4 text-[#00FF66]" />,
+      badge: pendingWalletCount > 0 ? pendingWalletCount : undefined,
+    },
+    {
+      name: 'Donation Requests',
+      route: '/admin/donations',
+      icon: <Heart className="w-4 h-4 text-rose-400 fill-rose-400/20" />,
+      badge: pendingDonationCount > 0 ? pendingDonationCount : undefined,
+    },
     {
       name: 'Premium Subscriptions',
       route: '/admin/premium',

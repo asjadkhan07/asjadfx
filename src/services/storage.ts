@@ -20,6 +20,10 @@ import {
   PremiumPaymentRequest,
   PremiumSettings,
   VIPPlanTierConfig,
+  WalletTransaction,
+  WalletConfig,
+  Donation,
+  DonationConfig,
 } from '../types';
 import { generateSalt, hashPassword, verifyPassword, generateToken } from './crypto';
 import {
@@ -64,46 +68,93 @@ const SETTINGS_STORAGE_KEY = 'asjadfx_admin_settings_v1';
 const ANNOUNCEMENTS_STORAGE_KEY = 'asjadfx_announcements_db_v1';
 const PREMIUM_REQUESTS_KEY = 'asjadfx_premium_requests_v1';
 const PREMIUM_SETTINGS_KEY = 'asjadfx_premium_settings_v1';
+const WALLET_TRANSACTIONS_KEY = 'asjadfx_wallet_transactions_v1';
+const WALLET_CONFIG_KEY = 'asjadfx_wallet_config_v1';
+const DONATIONS_STORAGE_KEY = 'asjadfx_donations_db_v1';
+const DONATION_CONFIG_KEY = 'asjadfx_donation_config_v1';
+
+export const DEFAULT_DONATION_CONFIG: DonationConfig = {
+  upiId: 'asjadfx@upi',
+  receiverName: 'ASJADFX Foundation',
+  qrCodeUrl: '',
+  beneficiaryName: 'ASJADFX Community & Educational Support Fund',
+  causeTitle: 'Empower Young Traders & Educational Welfare',
+  causeDescription:
+    'Your voluntary contributions support underprivileged community members with free education, server maintenance, high-tier trading tools, and community welfare initiatives.',
+  goalAmount: 50000,
+  instructions:
+    '1. Open Google Pay, PhonePe, Paytm, or any UPI app.\n2. Transfer any voluntary amount (minimum ₹1).\n3. Copy the 12-digit UTR / UPI Transaction Reference number.\n4. Upload the payment receipt screenshot.\n5. Admin will verify and permanently honor your contribution on the Donation Wall.',
+  enabled: true,
+};
+
+export const DEFAULT_WALLET_CONFIG: WalletConfig = {
+  minDepositAmount: 10,
+  upiId: 'asjadfx@upi',
+  receiverName: 'ASJADFX Official',
+  qrCodeUrl: '',
+  instructions: `1. Open Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
+2. Scan the official QR code or transfer funds directly to the official UPI ID.
+3. Minimum deposit amount is ₹10.
+4. After completing payment, copy the 12-digit UTR / UPI Transaction Reference Number from your payment receipt.
+5. Enter the exact amount paid, paste the UTR number, upload a clear payment screenshot, and submit.
+6. Once verified by Admin, your wallet balance will be credited immediately.`,
+  enabled: true,
+};
+
+export const VIP_FIXED_AVATARS = [
+  { id: 'avatar_crown', name: 'Royal Crown', icon: '👑', url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_diamond', name: 'Blue Diamond', icon: '💎', url: 'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_lion', name: 'Golden Lion', icon: '🦁', url: 'https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_falcon', name: 'Cyber Falcon', icon: '🦅', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_tiger', name: 'Bengal Tiger', icon: '🐯', url: 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_phoenix', name: 'Neon Phoenix', icon: '🔥', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_warrior', name: 'Shadow Warrior', icon: '⚔️', url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_trophy', name: 'Golden Cup', icon: '🏆', url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_shield', name: 'Aegis Shield', icon: '🛡️', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' },
+  { id: 'avatar_star', name: 'Cosmic Star', icon: '⭐', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=200&auto=format&fit=crop&q=80' },
+];
 
 export const DEFAULT_VIP_PLANS: VIPPlanTierConfig[] = [
   {
     id: 'vip_basic',
     name: 'ASJADFX VIP',
     price: 49,
-    durationLabel: '2 Months',
+    durationLabel: '2 Months (60 Days)',
     durationDays: 60,
     badge: '👑 VIP BASIC',
-    tagline: '2-Month Essential Access',
+    tagline: '₹24.50/month • 60 Days Access',
     spinPoolType: 'basic',
     benefits: [
-      '👑 Exclusive Gold Crown Badge & Profile Glow',
-      '🪙 +25% Extra Coins on eligible completed tasks',
-      '🎰 VIP BASIC DAILY SPIN (10 to 100 Coins Daily)',
-      '🏆 Leaderboard VIP Highlight & Recognition',
-      '🖼️ Custom Profile Picture upload access',
-      '🎁 Priority Access to Selected Giveaways',
-      '⚡ Standard Dedicated Support',
+      '👑 Exclusive VIP Badge (Blue & Gold Styling)',
+      '🎰 1 VIP Daily Spin every 24h (15 to 120 Coins)',
+      '🖼️ 10 Fixed Premium Avatar options',
+      '🪙 +25% Extra Coins on completed tasks',
+      '⚡ Priority Task Verification & Approval',
+      '🎁 Access to Exclusive VIP Giveaways',
+      '🏆 Leaderboard VIP Highlight (Clean Border)',
+      '⌛ Inactive after 60 days (reverts to free)',
     ],
   },
   {
     id: 'vip_lifetime',
-    name: 'ASJADFX VIP PRO / LIFETIME',
+    name: 'ASJADFX VIP LIFETIME',
     price: 99,
-    durationLabel: 'Lifetime',
+    durationLabel: 'Lifetime (Never Expires)',
     durationDays: -1,
     badge: '⭐ VIP LIFETIME (BEST VALUE)',
-    tagline: 'Unlimited Permanent VIP Status',
+    tagline: 'Permanent Elite VIP Access',
     spinPoolType: 'pro',
     popular: true,
     benefits: [
-      '👑 Everything in VIP Basic with ZERO Expiry',
-      '🎰 VIP PRO DAILY SPIN (25 to 500 Coins Daily)',
-      '🪙 Higher bonus rate & priority task approvals',
-      '🏆 Permanent Elite VIP Leaderboard Status',
-      '🖼️ Unlimited Custom Profile Customizations',
-      '🎁 Guaranteed VIP Giveaway Entries & Raffles',
-      '⚡ Priority VIP 24/7 Fast-Track Support',
-      '🚀 Early access to all future trading signals & tools',
+      '👑 Animated Golden VIP Crown Badge & Glow',
+      '🎰 3 VIP Daily Spins every 24h (25 to 500 Coins)',
+      '🖼️ Custom DP Upload from Gallery / Device',
+      '✨ Animated Leaderboard Border (Gold Shimmer)',
+      '👥 VIP Members Showcase Access',
+      '💬 Exclusive VIP Chat Room Access',
+      '🪙 +50% Extra Coins on completed tasks',
+      '🚀 Top Priority Verification & Instant Support',
+      '⭐ Permanent Lifetime Status (Zero Expiry)',
     ],
   },
 ];
@@ -3146,3 +3197,755 @@ export function resetAllUsersCoinsMonday(adminUser?: User): { success: boolean; 
   notifyDataChanged();
   return { success: true, count };
 }
+
+// ============================================================================
+// 👛 ASJADFX WALLET & REAL INR BALANCE SYSTEM
+// ============================================================================
+
+/**
+ * Returns current platform wallet configuration (UPI ID, receiver name, QR code, min deposit)
+ */
+export function getWalletConfig(): WalletConfig {
+  const saved = localStorage.getItem(WALLET_CONFIG_KEY);
+  if (!saved) {
+    const prem = getPremiumSettings();
+    const config: WalletConfig = {
+      ...DEFAULT_WALLET_CONFIG,
+      upiId: prem.upiId || DEFAULT_WALLET_CONFIG.upiId,
+      receiverName: prem.receiverName || DEFAULT_WALLET_CONFIG.receiverName,
+      qrCodeUrl: prem.qrCodeUrl || DEFAULT_WALLET_CONFIG.qrCodeUrl,
+    };
+    saveItem(WALLET_CONFIG_KEY, config);
+    return config;
+  }
+  try {
+    return { ...DEFAULT_WALLET_CONFIG, ...JSON.parse(saved) };
+  } catch {
+    return { ...DEFAULT_WALLET_CONFIG };
+  }
+}
+
+/**
+ * Updates platform-wide wallet configuration (Admin only)
+ */
+export function updateWalletConfig(newConfig: Partial<WalletConfig>): WalletConfig {
+  const current = getWalletConfig();
+  const updated: WalletConfig = {
+    ...current,
+    ...newConfig,
+  };
+  localStorage.setItem(WALLET_CONFIG_KEY, JSON.stringify(updated));
+  notifyDataChanged();
+  return updated;
+}
+
+/**
+ * Returns user's real INR wallet balance (never fake, defaults to 0)
+ */
+export function getUserWalletBalance(userId: string): number {
+  const user = findUserById(userId);
+  if (!user) return 0;
+  return Number(user.walletBalance ?? user.wallet_balance ?? 0);
+}
+
+/**
+ * Returns all wallet transactions across the platform (Admin view)
+ */
+export function getAllWalletTransactions(): WalletTransaction[] {
+  return getItems<WalletTransaction>(WALLET_TRANSACTIONS_KEY);
+}
+
+/**
+ * Returns strictly the transactions belonging to a specific user (RLS / Security isolation)
+ */
+export function getUserWalletTransactions(userId: string): WalletTransaction[] {
+  const all = getAllWalletTransactions();
+  return all.filter((tx) => tx.userId === userId);
+}
+
+/**
+ * User submits an Add Money / Wallet deposit request with UTR and screenshot proof
+ */
+export function submitWalletDeposit(
+  user: User,
+  data: {
+    amount: number;
+    referenceId: string;
+    screenshotUrl?: string;
+    notes?: string;
+  }
+): { success: boolean; transaction?: WalletTransaction; error?: string } {
+  const config = getWalletConfig();
+  if (!config.enabled) {
+    return { success: false, error: 'Wallet deposits are temporarily disabled for maintenance.' };
+  }
+
+  const numAmount = Number(data.amount);
+  if (isNaN(numAmount) || numAmount < config.minDepositAmount) {
+    return {
+      success: false,
+      error: `Minimum Add Money amount is ₹${config.minDepositAmount}. Please enter a valid amount.`,
+    };
+  }
+
+  const cleanRef = (data.referenceId || '').trim();
+  if (!cleanRef) {
+    return { success: false, error: 'UTR / Transaction Reference ID is required.' };
+  }
+  if (cleanRef.length < 6) {
+    return {
+      success: false,
+      error: 'Please enter a valid 12-digit UPI / UTR Transaction ID (minimum 6 characters).',
+    };
+  }
+
+  // Prevent duplicate UTR / Transaction ID in Wallet transactions
+  const allWalletTxs = getAllWalletTransactions();
+  const isDuplicateWallet = allWalletTxs.some(
+    (tx) => tx.referenceId.toLowerCase() === cleanRef.toLowerCase() && tx.status !== 'rejected'
+  );
+  if (isDuplicateWallet) {
+    return {
+      success: false,
+      error: 'This UTR / Transaction ID has already been submitted or processed. Duplicate requests are strictly prevented.',
+    };
+  }
+
+  // Also verify against VIP premium requests to prevent cross-feature UTR recycling
+  const allPremRequests = getAllPremiumRequests();
+  const isDuplicatePrem = allPremRequests.some(
+    (r) => r.transaction_id.toLowerCase() === cleanRef.toLowerCase() && r.payment_status !== 'rejected'
+  );
+  if (isDuplicatePrem) {
+    return {
+      success: false,
+      error: 'This Transaction Reference ID was already utilized for another request. Please verify your payment slip.',
+    };
+  }
+
+  const txId = `wtx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const newTx: WalletTransaction = {
+    id: txId,
+    userId: user.id,
+    userFullName: user.fullName,
+    username: user.username,
+    userEmail: user.email,
+    amount: Math.round(numAmount * 100) / 100,
+    type: 'deposit',
+    status: 'pending',
+    referenceId: cleanRef,
+    paymentMethod: 'UPI / QR Transfer',
+    screenshotUrl: data.screenshotUrl || '',
+    date: new Date().toISOString(),
+    notes: data.notes?.trim() || '',
+  };
+
+  allWalletTxs.unshift(newTx);
+  saveItems(WALLET_TRANSACTIONS_KEY, allWalletTxs);
+
+  // Send notification to user
+  createNotification({
+    userId: user.id,
+    type: 'admin_broadcast',
+    title: '👛 Wallet Deposit Request Submitted',
+    message: `Your deposit request of ₹${newTx.amount} (Ref: ${cleanRef}) has been received. Balance will update once verified by Admin.`,
+    actionUrl: '/wallet',
+  });
+
+  notifyDataChanged();
+  return { success: true, transaction: newTx };
+}
+
+/**
+ * Admin approves a wallet deposit request, credits the user's balance, and updates ledger
+ */
+export function approveWalletDeposit(
+  transactionId: string,
+  adminUser: User,
+  adminNotes?: string
+): { success: boolean; error?: string } {
+  if (adminUser.role !== 'admin') {
+    return { success: false, error: 'Admin authorization required.' };
+  }
+
+  const allTxs = getAllWalletTransactions();
+  const txIndex = allTxs.findIndex((t) => t.id === transactionId);
+  if (txIndex === -1) {
+    return { success: false, error: 'Transaction not found.' };
+  }
+
+  const tx = allTxs[txIndex];
+  if (tx.status !== 'pending') {
+    return { success: false, error: `Transaction is already marked as ${tx.status}.` };
+  }
+
+  const targetUser = findUserById(tx.userId);
+  if (!targetUser) {
+    return { success: false, error: 'Target user account not found.' };
+  }
+
+  // Credit user's wallet balance in ₹
+  const currentBal = Number(targetUser.walletBalance ?? targetUser.wallet_balance ?? 0);
+  const newBal = Math.round((currentBal + tx.amount) * 100) / 100;
+  targetUser.walletBalance = newBal;
+  targetUser.wallet_balance = newBal;
+  updateUser(targetUser);
+
+  // Update transaction status & snapshot balance
+  tx.status = 'successful';
+  tx.balanceAfter = newBal;
+  tx.reviewedByAdminId = adminUser.id;
+  tx.reviewedByAdminName = adminUser.fullName || adminUser.username;
+  tx.reviewedAt = new Date().toISOString();
+  if (adminNotes) {
+    tx.adminNotes = adminNotes.trim();
+  }
+
+  allTxs[txIndex] = tx;
+  saveItems(WALLET_TRANSACTIONS_KEY, allTxs);
+
+  // Send real-time notification to user
+  createNotification({
+    userId: targetUser.id,
+    type: 'admin_broadcast',
+    title: '✅ Wallet Deposit Successful!',
+    message: `₹${tx.amount} has been credited to your ASJADFX Wallet. New Balance: ₹${newBal}. (Ref: ${tx.referenceId})`,
+    actionUrl: '/wallet',
+  });
+
+  notifyDataChanged();
+  return { success: true };
+}
+
+/**
+ * Admin rejects a wallet deposit request with reason
+ */
+export function rejectWalletDeposit(
+  transactionId: string,
+  adminUser: User,
+  reason: string
+): { success: boolean; error?: string } {
+  if (adminUser.role !== 'admin') {
+    return { success: false, error: 'Admin authorization required.' };
+  }
+
+  const cleanReason = (reason || '').trim();
+  if (!cleanReason) {
+    return { success: false, error: 'Rejection reason is required.' };
+  }
+
+  const allTxs = getAllWalletTransactions();
+  const txIndex = allTxs.findIndex((t) => t.id === transactionId);
+  if (txIndex === -1) {
+    return { success: false, error: 'Transaction not found.' };
+  }
+
+  const tx = allTxs[txIndex];
+  if (tx.status !== 'pending') {
+    return { success: false, error: `Transaction is already marked as ${tx.status}.` };
+  }
+
+  tx.status = 'rejected';
+  tx.rejectionReason = cleanReason;
+  tx.reviewedByAdminId = adminUser.id;
+  tx.reviewedByAdminName = adminUser.fullName || adminUser.username;
+  tx.reviewedAt = new Date().toISOString();
+
+  allTxs[txIndex] = tx;
+  saveItems(WALLET_TRANSACTIONS_KEY, allTxs);
+
+  // Send real-time notification to user
+  createNotification({
+    userId: tx.userId,
+    type: 'admin_broadcast',
+    title: '❌ Wallet Deposit Rejected',
+    message: `Your deposit request for ₹${tx.amount} (Ref: ${tx.referenceId}) was rejected. Reason: ${cleanReason}`,
+    actionUrl: '/wallet',
+  });
+
+  notifyDataChanged();
+  return { success: true };
+}
+
+/**
+ * P2P Wallet Transfer: Transfer ₹ from one user to another atomically
+ */
+export function transferWalletBalance(
+  sender: User,
+  recipientQuery: string,
+  amount: number,
+  notes?: string
+): { success: boolean; error?: string; transaction?: WalletTransaction } {
+  const cleanRecipient = recipientQuery.trim();
+  if (!cleanRecipient) {
+    return { success: false, error: 'Recipient username or User ID is required.' };
+  }
+
+  const numAmount = Number(amount);
+  if (isNaN(numAmount) || numAmount < 1) {
+    return { success: false, error: 'Minimum transfer amount is ₹1.' };
+  }
+
+  // Get fresh sender record to ensure accurate live balance
+  const freshSender = findUserById(sender.id);
+  if (!freshSender) {
+    return { success: false, error: 'Sender account not found.' };
+  }
+
+  const senderBal = Number(freshSender.walletBalance ?? freshSender.wallet_balance ?? 0);
+  if (senderBal < numAmount) {
+    return {
+      success: false,
+      error: `Insufficient wallet balance. Available: ₹${senderBal}, Required: ₹${numAmount}.`,
+    };
+  }
+
+  // Find recipient by ID, username, or email (case-insensitive)
+  const allUsers = getAllUsers();
+  const recipient = allUsers.find(
+    (u) =>
+      u.id.toLowerCase() === cleanRecipient.toLowerCase() ||
+      u.username.toLowerCase() === cleanRecipient.toLowerCase() ||
+      u.email.toLowerCase() === cleanRecipient.toLowerCase()
+  );
+
+  if (!recipient) {
+    return {
+      success: false,
+      error: `Recipient "${cleanRecipient}" was not found. Please verify username or User ID.`,
+    };
+  }
+
+  if (recipient.id === freshSender.id) {
+    return { success: false, error: 'Self-transfer is not permitted.' };
+  }
+
+  if (recipient.isBanned || recipient.status === 'banned') {
+    return { success: false, error: 'Recipient account is banned and cannot receive transfers.' };
+  }
+
+  // Deduct from sender atomically
+  const newSenderBal = Math.round((senderBal - numAmount) * 100) / 100;
+  freshSender.walletBalance = newSenderBal;
+  freshSender.wallet_balance = newSenderBal;
+  updateUser(freshSender);
+
+  // Credit recipient atomically
+  const recipientCurrentBal = Number(recipient.walletBalance ?? recipient.wallet_balance ?? 0);
+  const newRecipientBal = Math.round((recipientCurrentBal + numAmount) * 100) / 100;
+  recipient.walletBalance = newRecipientBal;
+  recipient.wallet_balance = newRecipientBal;
+  updateUser(recipient);
+
+  const nowIso = new Date().toISOString();
+  const transferRef = `TRF${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+  // Record ledger transactions
+  const allWalletTxs = getAllWalletTransactions();
+
+  // Sender debit entry
+  const senderTx: WalletTransaction = {
+    id: `wtx_sent_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    userId: freshSender.id,
+    userFullName: freshSender.fullName,
+    username: freshSender.username,
+    userEmail: freshSender.email,
+    amount: numAmount,
+    type: 'transfer_sent',
+    status: 'successful',
+    referenceId: transferRef,
+    paymentMethod: 'P2P Wallet Transfer',
+    date: nowIso,
+    notes: notes?.trim() || `Sent to @${recipient.username}`,
+    balanceAfter: newSenderBal,
+    recipientUserId: recipient.id,
+    recipientUsername: recipient.username,
+    recipientFullName: recipient.fullName,
+  };
+
+  // Recipient credit entry
+  const recipientTx: WalletTransaction = {
+    id: `wtx_rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    userId: recipient.id,
+    userFullName: recipient.fullName,
+    username: recipient.username,
+    userEmail: recipient.email,
+    amount: numAmount,
+    type: 'transfer_received',
+    status: 'successful',
+    referenceId: transferRef,
+    paymentMethod: 'P2P Wallet Transfer',
+    date: nowIso,
+    notes: notes?.trim() || `Received from @${freshSender.username}`,
+    balanceAfter: newRecipientBal,
+    senderUserId: freshSender.id,
+    senderUsername: freshSender.username,
+    senderFullName: freshSender.fullName,
+  };
+
+  allWalletTxs.unshift(senderTx, recipientTx);
+  saveItems(WALLET_TRANSACTIONS_KEY, allWalletTxs);
+
+  // Send notifications to both parties
+  createNotification({
+    userId: freshSender.id,
+    type: 'admin_broadcast',
+    title: '💸 Money Transferred Successfully',
+    message: `You sent ₹${numAmount} to @${recipient.username}. New Balance: ₹${newSenderBal}. Ref: ${transferRef}`,
+    actionUrl: '/wallet',
+  });
+
+  createNotification({
+    userId: recipient.id,
+    type: 'admin_broadcast',
+    title: '💰 Money Received in Wallet!',
+    message: `You received ₹${numAmount} from @${freshSender.username}. New Balance: ₹${newRecipientBal}. Ref: ${transferRef}`,
+    actionUrl: '/wallet',
+  });
+
+  notifyDataChanged();
+  return { success: true, transaction: senderTx };
+}
+
+/**
+ * Donate directly from verified Wallet Balance
+ * Instantly creates approved donation & debits wallet ledger
+ */
+export function donateFromWalletBalance(
+  user: User,
+  data: {
+    amount: number;
+    message?: string;
+    isAnonymous: boolean;
+  }
+): { success: boolean; donation?: Donation; error?: string } {
+  const numAmount = Number(data.amount);
+  if (isNaN(numAmount) || numAmount < 1) {
+    return { success: false, error: 'Minimum donation amount is ₹1.' };
+  }
+
+  const freshUser = findUserById(user.id);
+  if (!freshUser) {
+    return { success: false, error: 'User account not found.' };
+  }
+
+  const currentBal = Number(freshUser.walletBalance ?? freshUser.wallet_balance ?? 0);
+  if (currentBal < numAmount) {
+    return { success: false, error: `Insufficient wallet balance. Available: ₹${currentBal}, Required: ₹${numAmount}.` };
+  }
+
+  // Deduct from wallet atomically
+  const newBal = Math.round((currentBal - numAmount) * 100) / 100;
+  freshUser.walletBalance = newBal;
+  freshUser.wallet_balance = newBal;
+  updateUser(freshUser);
+
+  const nowIso = new Date().toISOString();
+  const donRef = `DON-WLT-${Date.now().toString().slice(-6)}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+
+  // Record wallet ledger transaction (Debit)
+  const allWalletTxs = getAllWalletTransactions();
+  const wtx: WalletTransaction = {
+    id: `wtx_don_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    userId: freshUser.id,
+    userFullName: freshUser.fullName,
+    username: freshUser.username,
+    userEmail: freshUser.email,
+    amount: numAmount,
+    type: 'donation',
+    status: 'successful',
+    referenceId: donRef,
+    paymentMethod: 'Wallet Balance',
+    date: nowIso,
+    notes: data.message ? `Donation: ${data.message}` : 'Voluntary Community Donation',
+    balanceAfter: newBal,
+  };
+  allWalletTxs.unshift(wtx);
+  saveItems(WALLET_TRANSACTIONS_KEY, allWalletTxs);
+
+  // Record approved donation in donations ledger
+  const allDonations = getAllDonations();
+  const newDon: Donation = {
+    id: `don_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+    userId: freshUser.id,
+    userFullName: freshUser.fullName,
+    username: freshUser.username,
+    userEmail: freshUser.email,
+    amount: numAmount,
+    status: 'approved',
+    referenceId: donRef,
+    paymentMethod: 'Wallet Balance',
+    isAnonymous: data.isAnonymous,
+    message: data.message?.trim() || '',
+    date: nowIso,
+    causeTitle: getDonationConfig().causeTitle,
+    reviewedByAdminId: 'system_wallet_auto',
+    reviewedByAdminName: 'Instant Wallet Verification',
+    reviewedAt: nowIso,
+    thankYouShownToUser: false,
+  };
+  allDonations.unshift(newDon);
+  saveItems(DONATIONS_STORAGE_KEY, allDonations);
+
+  createNotification({
+    userId: freshUser.id,
+    type: 'admin_broadcast',
+    title: '❤️ Thank You For Supporting Us!',
+    message: `Your donation of ₹${numAmount} from Wallet Balance was successful. Your name is now featured on the Donation Wall!`,
+    actionUrl: '/donation',
+  });
+
+  notifyDataChanged();
+  return { success: true, donation: newDon };
+}
+
+/* ==========================================================================
+   DONATION SYSTEM (₹1+ Flexible, UPI, Verification, Leaderboard & Thank You)
+   ========================================================================== */
+
+/**
+ * Get current donation configuration
+ */
+export function getDonationConfig(): DonationConfig {
+  const cfg = getItem<DonationConfig>(DONATION_CONFIG_KEY, DEFAULT_DONATION_CONFIG);
+  if (!cfg || !cfg.upiId) {
+    return { ...DEFAULT_DONATION_CONFIG };
+  }
+  return { ...DEFAULT_DONATION_CONFIG, ...cfg };
+}
+
+/**
+ * Admin updates donation configuration (beneficiary, cause, upi, qr)
+ */
+export function updateDonationConfig(updates: Partial<DonationConfig>): DonationConfig {
+  const current = getDonationConfig();
+  const updated: DonationConfig = {
+    ...current,
+    ...updates,
+  };
+  saveItem(DONATION_CONFIG_KEY, updated);
+  notifyDataChanged();
+  return updated;
+}
+
+/**
+ * Retrieve all donations (for Admin review and audit)
+ */
+export function getAllDonations(): Donation[] {
+  return getItems<Donation>(DONATIONS_STORAGE_KEY);
+}
+
+/**
+ * Retrieve approved donations for public Donation Wall / Leaderboard
+ * Sorted by amount descending
+ */
+export function getApprovedDonations(): Donation[] {
+  const all = getAllDonations();
+  return all
+    .filter((d) => d.status === 'approved')
+    .sort((a, b) => b.amount - a.amount || new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+/**
+ * Retrieve donations made by a specific user
+ */
+export function getUserDonations(userId: string): Donation[] {
+  const all = getAllDonations();
+  return all
+    .filter((d) => d.userId === userId)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+/**
+ * Check if the user has an approved donation whose Thank You popup has not been shown yet
+ */
+export function getPendingThankYouDonation(userId: string): Donation | null {
+  const userDonations = getUserDonations(userId);
+  const pending = userDonations.find((d) => d.status === 'approved' && !d.thankYouShownToUser);
+  return pending || null;
+}
+
+/**
+ * Mark a donation's Thank You popup as shown once the user has seen it
+ */
+export function markThankYouAsShown(donationId: string): void {
+  const all = getAllDonations();
+  const index = all.findIndex((d) => d.id === donationId);
+  if (index !== -1) {
+    all[index].thankYouShownToUser = true;
+    saveItems(DONATIONS_STORAGE_KEY, all);
+    notifyDataChanged();
+  }
+}
+
+/**
+ * Submit a new voluntary donation (₹1+)
+ */
+export function submitDonation(
+  user: User,
+  data: {
+    amount: number;
+    referenceId: string;
+    screenshotUrl?: string;
+    isAnonymous: boolean;
+    message?: string;
+  }
+): { success: boolean; donation?: Donation; error?: string } {
+  const config = getDonationConfig();
+  if (!config.enabled) {
+    return { success: false, error: 'Donations are temporarily paused by administration.' };
+  }
+
+  const numAmount = Number(data.amount);
+  if (isNaN(numAmount) || numAmount < 1) {
+    return { success: false, error: 'Minimum donation amount is ₹1.' };
+  }
+
+  const cleanRef = (data.referenceId || '').trim();
+  if (!cleanRef || cleanRef.length < 5) {
+    return { success: false, error: 'Please enter a valid UPI / UTR Transaction ID (minimum 5 digits).' };
+  }
+
+  const allDonations = getAllDonations();
+
+  // Check for duplicate reference ID across all donations
+  const duplicate = allDonations.find(
+    (d) => d.referenceId.trim().toLowerCase() === cleanRef.toLowerCase()
+  );
+  if (duplicate) {
+    return {
+      success: false,
+      error: `The UTR / Reference ID "${cleanRef}" has already been submitted. Please check your bank transaction slip.`,
+    };
+  }
+
+  const newDonation: Donation = {
+    id: `don_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    userId: user.id,
+    userFullName: user.fullName || user.username,
+    username: user.username,
+    userEmail: user.email,
+    amount: Math.round(numAmount * 100) / 100,
+    status: 'pending',
+    referenceId: cleanRef,
+    paymentMethod: 'UPI Transfer',
+    screenshotUrl: data.screenshotUrl || '',
+    isAnonymous: !!data.isAnonymous,
+    message: (data.message || '').trim(),
+    date: new Date().toISOString(),
+    causeTitle: config.causeTitle,
+    thankYouShownToUser: false,
+  };
+
+  allDonations.unshift(newDonation);
+  saveItems(DONATIONS_STORAGE_KEY, allDonations);
+
+  // Send in-app notification confirming receipt
+  createNotification({
+    userId: user.id,
+    type: 'admin_broadcast',
+    title: '❤️ Donation Request Submitted',
+    message: `Thank you for supporting ASJADFX with ₹${newDonation.amount}! Admin will verify your UTR (${cleanRef}) shortly.`,
+    actionUrl: '/donation',
+  });
+
+  notifyDataChanged();
+  return { success: true, donation: newDonation };
+}
+
+/**
+ * Admin approves a donation request
+ */
+export function approveDonation(
+  donationId: string,
+  adminUser: User,
+  adminNote?: string
+): { success: boolean; donation?: Donation; error?: string } {
+  if (adminUser.role !== 'admin') {
+    return { success: false, error: 'Admin authorization required.' };
+  }
+
+  const allDonations = getAllDonations();
+  const index = allDonations.findIndex((d) => d.id === donationId);
+  if (index === -1) {
+    return { success: false, error: 'Donation record not found.' };
+  }
+
+  const donation = allDonations[index];
+  if (donation.status !== 'pending') {
+    return { success: false, error: `Donation is already ${donation.status}.` };
+  }
+
+  donation.status = 'approved';
+  donation.reviewedByAdminId = adminUser.id;
+  donation.reviewedByAdminName = adminUser.fullName || adminUser.username;
+  donation.reviewedAt = new Date().toISOString();
+  donation.rejectionReason = undefined;
+
+  allDonations[index] = donation;
+  saveItems(DONATIONS_STORAGE_KEY, allDonations);
+
+  // Send real-time notification to user
+  createNotification({
+    userId: donation.userId,
+    type: 'admin_broadcast',
+    title: '❤️ Donation Approved & Verified!',
+    message: `Your generous contribution of ₹${donation.amount} has been verified and added to the official ASJADFX Leaderboard. Thank you!`,
+    actionUrl: '/donation',
+  });
+
+  notifyDataChanged();
+  return { success: true, donation };
+}
+
+/**
+ * Admin rejects a donation request with reason
+ */
+export function rejectDonation(
+  donationId: string,
+  adminUser: User,
+  reason: string
+): { success: boolean; error?: string } {
+  if (adminUser.role !== 'admin') {
+    return { success: false, error: 'Admin authorization required.' };
+  }
+
+  const cleanReason = (reason || '').trim();
+  if (!cleanReason) {
+    return { success: false, error: 'Rejection reason is required.' };
+  }
+
+  const allDonations = getAllDonations();
+  const index = allDonations.findIndex((d) => d.id === donationId);
+  if (index === -1) {
+    return { success: false, error: 'Donation record not found.' };
+  }
+
+  const donation = allDonations[index];
+  if (donation.status !== 'pending') {
+    return { success: false, error: `Donation is already ${donation.status}.` };
+  }
+
+  donation.status = 'rejected';
+  donation.rejectionReason = cleanReason;
+  donation.reviewedByAdminId = adminUser.id;
+  donation.reviewedByAdminName = adminUser.fullName || adminUser.username;
+  donation.reviewedAt = new Date().toISOString();
+
+  allDonations[index] = donation;
+  saveItems(DONATIONS_STORAGE_KEY, allDonations);
+
+  // Send real-time notification to user
+  createNotification({
+    userId: donation.userId,
+    type: 'admin_broadcast',
+    title: '❌ Donation Verification Failed',
+    message: `Your donation submission of ₹${donation.amount} (UTR: ${donation.referenceId}) could not be verified. Reason: ${cleanReason}`,
+    actionUrl: '/donation',
+  });
+
+  notifyDataChanged();
+  return { success: true };
+}
+
+

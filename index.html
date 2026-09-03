@@ -2,6 +2,27 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Suppress benign Vite dev server/websocket disconnect notifications in sandboxed preview iframe
+      (function() {
+        var _origError = console.error;
+        console.error = function() {
+          if (arguments.length > 0) {
+            var first = arguments[0];
+            if (first === '[vite]' || (typeof first === 'string' && first.indexOf('[vite]') !== -1)) {
+              console.warn.apply(console, arguments);
+              return;
+            }
+          }
+          _origError.apply(console, arguments);
+        };
+        window.addEventListener('error', function(e) {
+          if (e && e.message && typeof e.message === 'string' && e.message.indexOf('[vite]') !== -1) {
+            e.preventDefault();
+          }
+        });
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
     <title>ASJADFX - Trade. Earn. Rise.</title>
     <meta name="description" content="Trade. Earn. Rise. Complete verified tasks, earn coins, and rise higher on ASJADFX." />

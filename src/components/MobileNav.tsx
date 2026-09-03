@@ -1,13 +1,13 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AppRoute } from '../types';
-import { Home, FileText, Target, Trophy, Coins, Gift } from 'lucide-react';
+import { Home, FileText, Target, Trophy, Coins, Gift, Wallet, Heart } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const { currentRoute, navigateTo } = useAuth();
 
-  // Exactly 6 bottom navigation items as required:
-  // Home | Rules | Tasks | Ranks | Coins | Rewards
+  // Bottom navigation items:
+  // Home | Rules | Tasks | Ranks | Coins | Rewards | Wallet | Donate
   const mobileItems: { label: string; route: AppRoute; icon: React.ReactNode }[] = [
     { label: 'Home', route: '/home', icon: <Home className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
     { label: 'Rules', route: '/rules', icon: <FileText className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
@@ -15,6 +15,8 @@ export const MobileNav: React.FC = () => {
     { label: 'Ranks', route: '/leaderboard', icon: <Trophy className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
     { label: 'Coins', route: '/coins', icon: <Coins className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
     { label: 'Rewards', route: '/rewards', icon: <Gift className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
+    { label: 'Wallet', route: '/wallet', icon: <Wallet className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> },
+    { label: 'Donate', route: '/donation', icon: <Heart className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-rose-400 fill-rose-400/20" /> },
   ];
 
   return (
@@ -23,7 +25,7 @@ export const MobileNav: React.FC = () => {
       aria-label="Mobile Navigation"
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#05070A]/95 backdrop-blur-xl border-t border-white/10 px-1 py-1 sm:py-1.5 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.8)]"
     >
-      <div className="grid grid-cols-6 items-center max-w-md mx-auto">
+      <div className="grid grid-cols-8 items-center max-w-xl mx-auto">
         {mobileItems.map((item) => {
           const isActive =
             currentRoute === item.route ||

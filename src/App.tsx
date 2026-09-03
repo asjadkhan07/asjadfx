@@ -22,6 +22,9 @@ import { RulesPage } from './pages/RulesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RewardsPage } from './pages/RewardsPage';
 import { PremiumPage } from './pages/PremiumPage';
+import { WalletPage } from './pages/WalletPage';
+import { DonationPage } from './pages/DonationPage';
+import { ThankYouDonationModal } from './components/ThankYouDonationModal';
 
 // Admin Components & Pages
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -40,6 +43,8 @@ import { AdminWarningsPage } from './pages/admin/AdminWarningsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminRewardsPage } from './pages/admin/AdminRewardsPage';
 import { AdminPremiumPage } from './pages/admin/AdminPremiumPage';
+import { AdminWalletPage } from './pages/admin/AdminWalletPage';
+import { AdminDonationsPage } from './pages/admin/AdminDonationsPage';
 
 const AppContent: React.FC = () => {
   const { user, isAuthenticated, isLoading, currentRoute, navigateTo } = useAuth();
@@ -71,6 +76,10 @@ const AppContent: React.FC = () => {
         case '/admin':
         case '/admin/dashboard':
           return <AdminDashboardPage />;
+        case '/admin/wallet':
+          return <AdminWalletPage />;
+        case '/admin/donations':
+          return <AdminDonationsPage />;
         case '/admin/premium':
           return <AdminPremiumPage />;
         case '/admin/platforms':
@@ -213,6 +222,19 @@ const AppContent: React.FC = () => {
         </div>
       );
     }
+    if (currentRoute === '/donation') {
+      return (
+        <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
+          <AnimatedBackground />
+          <Navbar />
+          <main className="flex-1 w-full relative z-10">
+            <DonationPage />
+          </main>
+          <AsjadAiChatbot />
+          <CoinRewardAnimation />
+        </div>
+      );
+    }
     // Default public landing page
     return (
       <div className="min-h-screen bg-[#05070A] text-slate-200 flex flex-col relative selection:bg-[#00FF66]/30 selection:text-[#00FF66]">
@@ -247,6 +269,10 @@ const AppContent: React.FC = () => {
         return <MyCoinsPage />;
       case '/rewards':
         return <RewardsPage />;
+      case '/wallet':
+        return <WalletPage />;
+      case '/donation':
+        return <DonationPage />;
       case '/rules':
         return <RulesPage />;
       case '/premium':
@@ -316,6 +342,9 @@ const AppContent: React.FC = () => {
 
       {/* Coin Reward Celebratory Effect */}
       <CoinRewardAnimation />
+
+      {/* Verified Donation Thank-You Modal */}
+      <ThankYouDonationModal />
     </div>
   );
 };
